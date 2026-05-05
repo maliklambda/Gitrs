@@ -1,0 +1,82 @@
+Git notes
+
+1.3 
+- Delta- vs. snapshot-based VC:
+    - Delta based VC: 
+        - stores changes in individual files (delta == changes -> delta-based)
+    - Snapshot based VC: 
+        - stores snapshot of entire directory, VC is then a stream of snapshots
+        - Unchanged files are not stored, only references to those files in previous versions
+        - Git is snapshot-based
+
+- Most git-operations are local (e.g. history is looked up locally)
+- Git's integrity:
+    - everything is stored with a checksum and referred to by the checksum
+    - the checksum is a 40-hexa-decimal-character SHA-1 hash 
+    - Git stores values in the DB by checksum
+
+- Git generally only adds data:
+    - only stores data after a commit
+    - this makes it possible to undo almost every operation
+
+- Files can have three main stages they can reside in:
+    1. modified:  a file has been changed but not staged/commited
+    2. staged:    a file has been marked to go into the next commit-snapshot
+    3. commited:  a file has been added to a commit-snapshot and has been written to the DB
+
+- Git-projects have three main sections: 
+    1. Working directory/tree: 
+        - working-tree = single checkout of one version of a Git-project
+        - files are pulled out of compressed Git-DB and placed on local disk
+    2. Staging area:
+        - staging area == one single file
+        - stores information about what goes into the next commit
+        - technical name: "index"
+    3. Git directory (.git/): 
+        - most important part of a Git-project
+        - stores information and metadata about the project 
+        - also stores the object-DB for the project
+        - this is what is being copied if you copy a repository from another computer
+
+- Basic workflow:
+    1. Files in working-tree are modified
+    2. Changes that are to be commited are selected -> only those changes are added to the staging area
+    3. Commit: a snapshot of all files in stating area is written to the DB
+
+
+
+1.6
+- Git config files:
+    - [path]/etc/gitconfig => every user on the machine
+    - ~/.config/git/config => only one user but every repository for that user (values with --global are stored here)
+    - .git/config => only for the project
+
+- show all configs:
+    $ git config --list --show-origin
+
+- Identity:
+    - parts: 1. Username 2. Email
+    - every commit uses indentity 
+    - identity is immutably baked into the commits 
+    $ git config --global user.name "John Doe"
+    $ git config --global user.email johndoe@example.com
+    -> --global uses this indentity for every user on the system (so in ~/.config/git/config)
+
+- Default branch name: 
+    - branch which is created with $ git init
+    - can be changed with $ git config --global init.defaultBranch main
+
+- Checking configs:
+    - $ git config --list
+    - $ git config <key>
+
+
+1.7 
+- get help: 
+    - $ git help
+    - $ git <cmd> -h
+
+
+
+
+

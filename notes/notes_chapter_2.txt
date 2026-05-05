@@ -1,0 +1,216 @@
+2.1 
+- Obtaining a Git repository:
+    1. Local directory (that is not under VC) -> turn it into Git repo
+        - $ git init 
+        - creates a .git/ directory -> so far nothing is tracked
+        - $ git add <file(s)>
+        - $ git commit -m <message>
+        -> now files are tracked
+    2. Clone an existing repo from elsewhere
+        - clone != checkout -> full copy of nearly all data on the server is copied to local 
+        - $ git clone <url> <dirname>
+          1. creates a dir (from the name specified in the url or by optional arg <dirname>)
+          2. initializes a .git/ folder in the new dir
+          3. Git pulls all data from the remote-repository
+          4. Checks out a working copy of the latest version
+
+
+2.2 
+- A file in a Git-project can be A) tracked or B) untracked 
+    - tracked files:
+        - files that Git knows about
+        - newly staged files or files that were in the last snapshot
+        - tracked files can be A) unmodified, B) modified or C) staged
+    - untracked files:
+        - everything else 
+        - any file that was not in the last snapshot and is not in staging
+
+- Current status:
+    - $ git status -> shows untracked/unstaged/staged files for current branch
+    - the command '$ git add' stages files exactly how they are during the command -> if edited afterwards, a file may be staged and unstaged at the same time
+
+- Ignoring files:
+    - .gitignore specifies files and dirs that are ignored by Git 
+    - rules & patterns for .gitignore:
+        - '#' is a comment
+        - '/' in the beginning disables recursion 
+        - '/' in the end specifies that it's a dir
+        - '!' is negation
+        - standard glob patterns (patterns similar to simple regexes) are supported (will be applied recursively throughout the entire working-tree)
+            - '*' matches zero or more characters
+            - '[abc]' matches any character inside '[]' (here: 'a', 'b' and 'c')
+            - '?' matches a single character 
+            - '[(0-3)]' matches any character in the specified range (here: '0', 1', '2' and '3')
+            - 'a/**/z' matches nested directory (here: a/z, a/b/z, a/b/c/z, ...)
+
+- View changes:
+    - $ git diff
+    -> Anwers two questions:
+        1. What changes are not staged? 
+            -> $ git diff (compares unstaged changes to last commit; disregards staged changes)
+        2. What changes are staged and about to be commited? 
+            -> $ git diff --staged (compares staged changes to last commit, works also with $ git diff --cached)
+
+- Commit staged changes:
+    - $ git commit -m <message> -> commits all staged changes with the message (message may not be empty)
+    - $ git commit -a -m <message> -> commits all changed files; skips staging
+
+- Removing files:
+    - $ git rm <file> -> removes file from staging area and also deletes it from the woriking dir 
+        -> if just removed ($ rm <file>), file will be shown in unstaged changes
+    - $ git rm --cached <file> -> removes file from staging but keeps it in the working dir
+    - globs can be passed to $ git rm <glob>
+
+- File Movements:
+    - Git does not track movements of files explicitly (other VCSs do)
+        -> renaming a file will not store any metadata about the rename (although it will be detected later on)
+    - $ git mv <src> <dst> -> this will move (i.e. rename) a file from src to dst
+    - $ git mv <src> <dst> -> is equivalent to: $ git mv <src> <dst>; git rm <src>; git add <dst>
+
+
+2.3 
+- Viewing the commit history:
+    - $ git log 
+    - displays the history of commits in reverse chronological order (most recent commit first)
+    - without args, it shows only: A) commit-hash, B) author, C) date and commit-message
+    - some flags for $ git log:
+        -p/--patch <num> -> displays diff with each commit 
+        --stat -> shows how many files were deleted/changed/added
+        --pretty=<option> -> how are logs displayed (<option> can be short, full, oneline, fuller and format)
+            -> format gives a formatted string specified after the flag
+        --graph -> (in combination with format and oneline) shows an ASCII representation of the commit-graph
+        ...
+    - limiting the log output:
+        --since <time> -> outputs only commits since time
+        --after <time> -> outputs only commits after time
+        --before <time> -> outputs only commits before time
+        --until <time> -> outputs only commits until time
+        --grep <pattern> -> only commits that match the pattern (allows multiple --grep flags; value that matches any will be included)
+        --all-match -> limits output to match ALL grep patterns
+        --author <pattern> -> only commits by authors that match the pattern (allows multiple --author flags; value that matches any will be included)
+        --commiter <pattern> -> like --author
+        -S <some_str> -> "pickaxe"-option; filters for a string some_str
+        -- <some/path> -> filters for only commits that effected some/path
+        --no-merge -> filters out all merge-commits
+
+- Commiter vs. Author:
+    - Author = the one who originally wrote the work
+    - Commiter = the one who last applied the work
+
+
+
+2.4
+- Undoing things:
+    - Undo of undo may not be undoable 
+    - $ git commit --amend -> this command alters a previous commit 
+        -> it adds current staging to the last commit and alters the commit message so that there is only one commit
+        -> this amends/replaces the previous commit!
+        - amending should only be used on local (not-yet-pushed) files
+
+- Unstaging a staged file:
+    - $ git reset HEAD <file>
+        -> takes a file from staging and moves it to modified
+    - $ git restore --staged <file>
+        -> modern/newer way of unstaging a file
+
+- Modified to unmodified (reset file back to how it was in the last commit)
+    - $ git checkout -- <file>
+        -> this will discard all changes made to the file since the last commit 
+        -> the changes to the file will be lost!
+    - $ git restore <file>
+        -> modern/newer way of dicarding changes 
+        -> the changes to the file will be lost!
+
+
+2.5
+- Remote repository = Git-project that is located somewhere other than the cwd (on the internet, a server or even on the same machine)
+- Showing remote connections:
+    - $ git remote -> this command shows all remote connections
+    - the flag -v shows this in more detail
+
+- Adding a remote repository:
+    - $ git remote add <shortname> <url> -> this adds url under shortname
+    - $ git clone <url> -> this adds url under "origin" (default-branch name for cloned repositories)
+
+- Getting changes from remote repository:
+    - $ git fetch <shortname/url> 
+        -> fetches the url (either specified or identified by shortname)
+        -> default is "origin"
+        -> branches are available @<shortname>/<branchname>
+        -> $ git fetch <remote> -> only downloads data, does no merging or similar
+    - $ git pull 
+        -> usable if current branch is set up to track a remote branch 
+        -> fetches changes from remote branch and merges them into local branch
+        -> $ git clone -> local main branch will track remote main branch by default 
+            -> $ git pull -> will then fetch and merge from remote main to local main
+
+- Pushing changes to remote repository:
+    - $ git push <remote> <branch>
+        -> default (after '$ git clone') is remote="origin" and branch="main"
+        -> only works if no one else has pushed after you have pulled (in that case, you have to fetch the changes first)
+
+- Inspecting a remote:
+    - $ git remote show <remote> 
+        -> displays information about a remote repository (branches, urls, configs for local branches, etc.)
+
+- Renaming & Removing a remote repository:
+    - $ git remote rename <oldname> <newname>
+        -> renames the shortname to url mapping from oldname to newname
+        -> also changes what remote branches are tracked: what ased to be referenced by oldname/main is now referenced by newname/main
+    - $ git remote remove <remote> / $ git remote rm <remote> 
+        -> Deletes a remote from Local
+        -> deletes all local referenced to that remote
+
+
+2.6 
+- Tagging:
+    - Git allows for tagging of specific important points in a repository's history 
+    -> Commonly used for tagging release version (e.g. v1.0, v1.1, v2.0, ...)
+
+- Listing tags:
+    - $ git tag -> lists all tags in alphabetical order
+        - optional flags: -l or --list 
+            -> this also a pattern to be added ('$ git tag -l <pattern>') that filters tags for those that match the pattern
+    - $ git show <tagname> -> displays metadata about the tag
+
+- Types of tags: Annotated vs. Lightweight tags:
+        - Annotated tag: tag that has A) a tag name and B) a message associated with this tag
+
+- Adding tags:
+    - Annotated tag: $ git tag -a <tagname> -m <tagmessage> -> adds the tagname associated with the tagmessage
+    - Lightweight tag: $ git tag <tagname> 
+        -> this adds the tagname with the checksum
+        -> none of the following flags are allowed for Lightweight tags: -a, -m, -s
+    - Adding tags later: $ git tag -a <tagname> <checksum> 
+        -> if the checksum of a commit is specified after the tagname, the tag is associated to that commit (part of the checksum may also be enough)
+
+- Sharing tags:
+    - $ git push <remote> -> will not push tags by default
+    - $ git push <remote> <tagname> -> this will push tagname to remote
+    - $ git push <remote> --tags -> this will push all tags to remote
+    - $ git push <remote> --follow-tags -> this will push only annotated tags (for Lightweight tags, there is no option)
+
+- Deleting tags:
+    - $ git tag -d <tagname> -> this will remove the tag locally
+    - to delete a tag on a remote branch:
+        - $ git push <remote> :/refs/tags/<tagname> -> this will push "" (before the ":") to /refs/tags/<tagname>, essentially deleting it
+        - $ git push <remote> --delete <tagname> -> does the same thing
+
+- Checking out tags:
+    - $ git checkout <tagname> 
+        -> this will checkout to tagname 
+        -> now you can see the versions of files at the commit of <tagname>
+        -> it will leave the local repository in "detached HEAD"-state (which has some side-effects)
+            -> when commiting changes in "detached HEAD"-state, no branch is there to receive the commits 
+            -> the commits will not belong to any branch and will thus be unreachable (except by exact commit-hash)
+            -> a new branch needs to be created in order to make the commits reachable
+
+2.7 
+- Git aliases:
+    - alias a long command with a short command
+    - create aliases with $ git config --global alias.<short_cmd> <long_cmd> (e.g. $ git config --global alias.co checkout)
+    - also allows for external commands with "!" 
+        -> e.g. git config --global alias.gr !git-graph
+        -> '$ git-graph' and '$ git gr' now are equivalent
+
+

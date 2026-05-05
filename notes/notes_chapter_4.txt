@@ -1,0 +1,35 @@
+
+4.1 
+- remote repository = bare repository (repository without working directory, so only the .git folders)
+- Git supports 4 protocols:
+    1. Local:
+        - remote repository is on the same host but in a different directory
+        - useful, if e.g. a shared file system is already set up 
+        - might be inconvenient because the file system needs to be mounted in order to work on the repo
+
+    2. HTTP:
+        2.1 Smart HTTP:
+            - similar to SSH 
+            -> has some additional conveniences like authentication via "/username/password" instead of an SSH-key
+            - supports authentication and encryption
+            - handles both read/write and read-only access
+            - pretty fast and very convenient
+        2.2 Dumb HTTP:
+            - bare Git repository that is served by an HTTP-server (server serves the project on its root-endpoint)
+            - very simple setup
+            - fallback if Smart HTTP is unavailable
+
+    3. SSH:
+        - commonly used for self-hosted repos (since SSH is setup already on many machines; if not, the setup is easy)
+        - supports authentication and encryption
+        - does not support anonymus access (every user must be authenticated before interacting with the repo)
+
+    4. Git Protocol:
+        - Git-protocol = special daemon that comes with git 
+        - listenes on port (9418) -> serves the repo in SSH-like fashion without any authentication/encryption
+        - to serve the repo, a file "git-daemon-export-ok" must exist (this is the ONLY security)
+        - there is generally no pushing allowed (since there is no authentication, either no-one or everyone can push to the repo)
+        - generally the fastest of all 4 protocols (since it is Git-native)
+        - good for serving large repos with no need for authentication
+
+  4.2

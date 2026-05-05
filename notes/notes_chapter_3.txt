@@ -1,0 +1,194 @@
+
+
+
+3.1
+- Branching:
+    - branching = diverging from main line of development
+    - after a commit, 3 things are stored: 
+        1. Blobs for each file (file content)
+        2. Tree-structure of working directory at the time of the commit 
+            -> also contains the metadata (e.g. filenames) for each blob
+        3. Commit with metadata (e.g. timestamp, author, ...) and a pointer to the tree
+        4. A pointer to the previous commit 
+    - branch = a pointer to a commit
+    
+- Creating a new branch:
+    - creates a new pointer to the current commit (i.e. a new pointer to the same element as HEAD)
+    - $ git branch <branchname>
+        -> this only creates the branch 
+        -> use '$ git checkout <branchname>' (or '$ git checkout -b <branchname>') to 
+            A) move HEAD to the new branch
+            B) change the files in the current working directory (switching branches will changes files in the cwd)
+        -> $ git switch <options> -> this is the newer version of checkout 
+            -> $ git switch <branchname> -> moves HEAD to branchname and changes files in cwd
+            -> $ git switch -c <new_branch> -> creates a new branch and moves HEAD to it
+            -> $ git switch - -> switches to previous branch
+
+- HEAD:
+    - pointer to a branch 
+    - always points to the current branch
+
+- By default '$ git log' will only show history before the current branch (nothing after it)
+    -> $ git log <branchname> -> this will log for this branch specifically
+    -> $ git log --all -> this will log for all branches (even future ones [from pov of current branch])
+
+
+3.2
+- Switching a branch with uncommited local changes:
+    - since switching a branch will change the files in the cwd, uncommited changes will be lost after the switch
+        -> Git will not let you switch branches with uncommited changes (that would be lost)
+
+- Merging:
+    - $ git merge <branch> -> this will merge the current branch with another branch
+    - $ git merge main -> this will merge all changes (that occured on main-branch) since the last common commit between main and current_branch into current_branch
+
+- Fast-forward-merges:
+    - if the commit current_branch points to is reachable by following the history of the other_branch
+        -> this is called a "fast-forward" because the pointer to current_branch will just be moved forward (to the other_branch)
+
+- Three-way-merges:
+    - if the commit other_branch points to is not a direct descendant of current_branch, then some work needs to be done:
+        - Git needs 3 commits:
+            1. The commit current_branch points to ("snapshot to move into")
+            2. The commit other_branch points to ("snapshot to move in")
+            3. The Common ancestor between the two commits
+        -> Git then creates a snapshot using the three commits and automatically commits it
+            -> this is called a "Merge commit"
+            -> it is special because it has more than one parent
+        -> this process is called "recursive strategy"
+
+- Merge conflicts:
+    - if during a three-way-merge the same lines in a file have been changed, then Git cannot just merge them 
+        -> what changes are to be accepted? -> that's a merge conflict
+    - $ git status -> will display unmerged files 
+    - after resolving the conflicts, staging the file will mark it as "resolved"
+    - if all conflicts are resolved, then '$ git commit' can be run
+
+- Deleting a branch:
+    - $ git branch -d <branchname> 
+    - $ git branch -D <branchname> -> this will force delete the branch
+
+- Display current branches:
+    - $ git branch -> displays branches that exist locally 
+
+
+3.3 
+- Display branches:
+    - $ git branch -v -> displays current branches (-v = verbose) with "*" marking the current branch
+    - flags: 
+        --merged -> filters for only branches that have been merged into the current branch
+        --no-merged -> filters for only branches that have NOT been merged into the current branch
+            -> deleting a branch that is not fully merged will fail (since this would delete unmerged changes)
+            -> a branch_name can be specified for --merged and --no-merged (to show the same for branches other than the current one)
+
+- Changing a branch's name:
+    - $ git branch --move <old_branch_name> <new_branch_name> -> this will rename the branch locally
+    - $ git push --set-upstream <remote> <new_branch_name>
+        -> this will push <new_branch_name> to remote but the branch <old_branch_name> is still there 
+        -> $ git push <remote> --delete <old_branch_name>
+    - Changing the master/main branch's name should be done with care and consideration
+
+
+3.4
+- Git's branching:
+    - Git uses a simple Three-way-merge -> enables multiple branches to exist simultaneously 
+
+- Progressive-stability branching: 
+    - typical workflow:
+        - master/main branch has only stable/released features
+        - development/next branch bases on master/main and is ahead of some commits
+        - new features/experimental branches are merged into development/next branch 
+        - once dev/next is stable, it can be merged into master/main (i.e. pointer to master/main is simply moved forward, since master/main is linearily behind dev/next)
+
+- Topic branches:
+    - one branch that encapsulates one topic 
+
+
+3.5
+- Remote branches:
+    - Remote references = pointers in the remote repository including branches, tags, etc. 
+    - get information about remote references: 
+        - $ git ls-remote <remote>
+        - $ git remote show <remote>
+        - remote-tracking-branches
+
+- Remote tracking branches:
+    - remote tracking branches = references to the state of a remote branch 
+    - they are local references that are only moved by Git itself (to ensure that the references are valid)
+    - they are like bookmarks
+    - form: <remote>/<branch> -> e.g. master branch on origin remote = origin/master 
+        -> "origin" is not special (similar to "master"-branch), it is just the default remote-name after a "$ git clone"
+    - example:
+        1) You clone from the remote-repo "git.some_url.com" (as "origin")
+        2) local and remote master branch reference the same commit 
+        3) Someone else pushes something to "git.some_url.com" and modifies the master branch to reference a new commit 
+        4) You make changes to your local master branch 
+        -> locally there is just one branch (master)
+        5) You run "$ git fetch origin/master" which fetches the changes pushed to the remote master branch since the last fetch of origin/master 
+        -> now there are two distinct branches: origin/master (remote) and master (local) that split up at the last commit that has been fetched locally 
+
+- Pushing a branch:
+    - $ git push <remote> <branch_name> -> this pushes the local branch to the remote repo 
+    - this branch is not automatically editable from there on 
+        -> you first need to checkout a new branch locally (that should have the same name as the remote branch)
+            -> $ git checkout -b <branch_name_local> <branch_name_remote>
+            -> this creates a local branch that can be modified and starts at the commit that <branch_name_remote> refers to
+
+- Tracking branches:
+    - tracking branches = local branches that have a direct connection to a remote branch
+    - checking out a local branch ("$ git checkout -b <some_branch>") will automatically create a tracking branch 
+    - the branch that is tracked (by the tracking branch) is called "upstream-branch"
+    - running "$ git pull" whilst on a tracking branch, Git will fetch from the upstream-branch and merge it in
+    - running "$ git clone <url>" will create a local master branch (which is a tracking branch) that will track the origin/master branch (which is the upstream-branch) 
+    - running "$ git checkout -b <branch_name> <remote>/<same_branch_name>" will create a tracking branch that will have some remote branch as the upstream branch (they share the same name)
+        -> this can be shortened as "$ git checkout --track <remote>/<branch>" -> this will create a local branch that tracks the remote branch (with the same name)
+        -> if the branch that is tryed to be checked out exists only on one of the remotes, then Git will create a new local branch that tracks this one branch on remote (after "$ git checkout <unique_branch>")
+    - $ git branch -u <remote>/<branch> -> this will tell the current branch to track <remote>/<branch> 
+        -> also works like this: $ git branch --set-upstream-to <remote>/<branch> 
+    - $ git branch -vv -> this ("-vv") will list all local branches with their respective upstream-branches (and the status between the two) -> only for commits since the last fetch 
+
+- Pulling:
+    - $ git fetch -> it will only fetch the changes on the server that are not local 
+        -> it will not modify the current working directory (changes are only available locally, not merged)
+    - $ git pull -> it will fetch the changes from the upstream-branch and try to merge them into the local tracking-branch
+
+- Deleting a remote branch:
+    - to delete a remote branch, run "$ git push <remote> --delete <branch_name>"
+        -> this will remove the pointer to that branch on the remote repository 
+        -> the Git server will keep the data of the deleted branch for a while and then eventually garbage collect it
+
+
+3.6 
+- Two main ways to integrate changes from one branch to another: 
+    - initial situation: after some commit, there is a diverged work history (so there are two branches that stem from the same commit)
+    1. Merge: 
+        - Three-way-merge -> merge the final snapshot of all changes that were made on the branch that is to be merged in 
+        - The branch that the other one is merged into accepts the final snapshot of all commits on the diverged branch
+    2. Rebase:
+        - Replay each commit made on the diverged branch on the other branch:
+            1) checkout the diverged branch (the one that is to be merged in): $ git checkout <other_branch>
+            2) rebase the current branch on the other branch: $ git rebase <base_branch> 
+            -> this will 
+                A) go to the common-ancestor of the two branches
+                B) along the way, saving all changes per commit to a temp_file 
+                C) set the current branch to point to the same commit as the branch that is rebased on 
+                D) apply each of the changes (that were saved to a temp_file) for the current branch 
+            -> the base_branch can the forward merge, to get the changes that were replayed on its most recent commit 
+    -> the effect of Merge and Rebase are the same, but Rebase will leave a cleaner history behind it
+        -> the history will appear to be linear/sequential even though it happened in parallel 
+        -> is especially useful when contributing to a foreign project (all the maintainer has to do to include the new changes is a fast forward merge) 
+
+- A rebase can also happen on other than the rebase target branch 
+    -> normal pattern for rebase ($ git rebase <base_branch> <divergent_branch>) can be altered using --onto     
+    -> e.g. if there is a main branch and a divergent sub-branch A which itself has another sub-branch B, the following is possible:
+        - the changes on branch B that are not in A can be rebased onto the main branch by using:
+            $ git rebase --onto main A B -> the pattern is: $ git rebase --onto <target_branch> <base_branch> <divergent_branch>
+            -> this takes the diff of base_branch and divergent_branch (so the changes that are in divergent_branch and not in base_branch) and replays them on target_branch
+    - "only ever rebase commits that have never left your own computer" or "[only] rebase commits that have been pushed, but that no one else has based commits from"
+
+- rules for rebasing:
+    - rebasing can be very annoying if done incorrect:
+        - "Do not rebase commits that exist outside your repository and that people may have based work on."
+        -> Only rebase locally for commits that do not exists anywhere else 
+    - With a messy commit-history, a "$ git pull" might have to be interchanged by a "$ git pull --rebase" or a "$ git fetch" followed by a "$ git rebase <remote_master_branch>"
+
