@@ -6,6 +6,17 @@ pub const NULL_HASH: &str = "NULL"; // TODO: change this to a real hash
 pub const DEFAULT_BRANCH: &str = "main";
 pub const BASE_DIR_NAME: &str = "gitrs";
 pub const CONFIG_FILE: &str = "gitrsconfig";
+pub const HEAD_FILE: &str = "HEAD";
+pub const REFS_DIR: &str = "refs";
+pub const HEADS_DIR: &str = "heads";
+
+/// Prefixed to the path held in .gitrs/HEAD
+pub mod head_prefixes {
+    pub const HEAD_PREFIX_LEN: usize = 3;
+    pub const HEAD_REF_STR: &str = "ref";
+    pub const HEAD_TAG_STR: &str = "tag";
+    pub const HEAD_RMT_STR: &str = "rmt";
+}
 
 macro_rules! register_const_mod {
     ($mod_name:ident, $($name:ident = $val:expr),* $(,)?) => {
