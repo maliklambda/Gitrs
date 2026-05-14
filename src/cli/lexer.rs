@@ -1,35 +1,40 @@
+use std::collections::VecDeque;
+
 use log::debug;
 
 use crate::{
     cli::{ParseCliError, Token},
-    constants::{self, CLI_FLAG_PREFIX_SHORT, EQUAL, SPACE},
+    constants::{
+        const_cmds::{flags, keywords},
+        special_chars::{CLI_FLAG_PREFIX_SHORT, EQUAL, SPACE},
+    },
 };
 
 pub struct Lexer<'a> {
-    pub tokens: Vec<Token<'a>>,
+    pub tokens: VecDeque<Token<'a>>,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(args: &'a [String]) -> Result<Self, ParseCliError> {
+    pub fn new(args: &'a [String]) -> Result<Self, ParseCliError<'a>> {
         Ok(Self {
             tokens: Self::tokenize(args)?,
         })
     }
 
     pub fn next(&mut self) -> Token<'_> {
-        self.tokens.pop().unwrap_or(Token::TEOF)
+        self.tokens.pop_front().unwrap_or(Token::TEOF)
     }
 
     pub fn peek(&mut self) -> Token<'_> {
-        self.tokens.last().copied().unwrap_or(Token::TEOF)
+        self.tokens.iter().last().copied().unwrap_or(Token::TEOF)
     }
 
     /// Build tokens from raw arguments.
-    fn tokenize(args: &'a [String]) -> Result<Vec<Token<'a>>, ParseCliError> {
-        let mut tokens: Vec<Token> = vec![];
+    fn tokenize(args: &'a [String]) -> Result<VecDeque<Token<'a>>, ParseCliError<'a>> {
+        let mut tokens: VecDeque<Token> = VecDeque::new();
         for arg in args {
             let token = match arg {
-                cmd if constants::keywords::ALL.contains(&arg.as_str()) => {
+                cmd if keywords::ALL.contains(&arg.as_str()) => {
                     debug!("Command: '{arg}'");
                     Token::TCommand(cmd)
                 }
@@ -41,7 +46,7 @@ impl<'a> Lexer<'a> {
                     todo!("Key-Value Pair");
                 }
                 flag if flag.starts_with(CLI_FLAG_PREFIX_SHORT)
-                    & constants::flags::ALL.contains(&flag.as_str()) =>
+                    & flags::ALL.contains(&flag.as_str()) =>
                 {
                     debug!("Flag arg: {flag}");
                     Token::TFlag(flag)
@@ -52,10 +57,10 @@ impl<'a> Lexer<'a> {
                 }
                 _ => Token::TString(arg),
             };
-            tokens.push(token)
+            tokens.push_back(token)
         }
         debug!("Tokens (non-reversed): {:?}", tokens);
-        tokens.reverse(); // reverse tokens to enable usage of tokens.pop()
+        // tokens.reverse(); // reverse tokens to enable usage of tokens.pop()
         Ok(tokens)
     }
 }

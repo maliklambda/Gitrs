@@ -7,12 +7,13 @@ use log::{debug, info};
 
 use crate::{
     command::Command,
-    constants::{BASE_DIR_NAME, CONFIG_FILE, HEAD_FILE, HEADS_DIR, REFS_DIR},
+    config::GitrsConfig,
+    constants::{BASE_DIR_NAME, CONFIG_FILE, HEAD_FILE, HEADS_DIR, OBJECTS_DIR, REFS_DIR},
     execute::ExecuteError,
     internals::{
         branch::Branch,
-        commit::Commit,
-        head::{HeadPrefix, write_head_path},
+        head::{HeadPrefix, read_head_path, write_head_path},
+        objects::commit::Commit,
         stage::Stage,
     },
 };
@@ -24,6 +25,9 @@ use crate::{
 pub struct Gitrs<'a> {
     /// the currently selected commit
     head: Commit,
+
+    /// All configurations live here
+    config: GitrsConfig,
 
     /// Keep references to all known branches
     /// Note: necessary? Why not read it only when explicitly needed?
@@ -38,23 +42,26 @@ pub struct Gitrs<'a> {
 impl<'a> Gitrs<'a> {
     pub fn new(
         head: Commit,
+        config: GitrsConfig,
         branches: Vec<Branch>,
         default_branch: &'a Branch,
         stage: Stage,
     ) -> Self {
         Gitrs {
             head,
+            config,
             branches,
             default_branch,
             stage,
         }
     }
 
+    /// Inits a new gitrs structure in a dir that is not yet a gitrs repository.
     pub fn init_new(init_cmd: Command<'_>) -> Result<(), ExecuteError> {
         let base_dir = Path::new(BASE_DIR_NAME);
         if std::path::Path::exists(base_dir) {
             return Err(ExecuteError::InitError {
-                msg: String::from("Current directory is already a gitrs repository.")
+                msg: String::from("Current directory is already a gitrs repository."),
             });
         }
 
@@ -87,6 +94,13 @@ impl<'a> Gitrs<'a> {
                 msg: err.to_string(),
             })?;
 
+            // objects dir
+            let mut objects_dir = base_dir.to_path_buf();
+            objects_dir.push(OBJECTS_DIR);
+            std::fs::create_dir_all(&objects_dir).map_err(|err| ExecuteError::InitError {
+                msg: err.to_string(),
+            })?;
+
             // default branch file
             let mut default_branch_path = refs_heads_dir;
             default_branch_path.push(default_branch);
@@ -112,4 +126,27 @@ impl<'a> Gitrs<'a> {
             init_cmd
         );
     }
+
+    /// Inits a new gitrs structure from an existing gitrs project.
+    /// TODO: Implement gitrs_cache to not have to read all files every time.
+    pub fn init_existing() -> Result<Self, ExecuteError> {
+        let base_dir = Path::new(BASE_DIR_NAME);
+        if !std::path::Path::exists(base_dir) {
+            return Err(ExecuteError::InitError {
+                msg: String::from(
+                    "Current dir is NOT a gitrs repository. Trying to init an existing repo, but none found.",
+                ),
+            });
+        }
+        let head_commit = read_head_commit().unwrap();
+
+        // let config =
+
+        todo!();
+    }
+}
+
+fn read_head_commit() -> Result<Commit, std::io::Error> {
+    let hc = read_head_path();
+    todo!()
 }

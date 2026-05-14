@@ -4,10 +4,38 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use log::debug;
+use crate::{
+    constants::{BASE_DIR_NAME, HEAD_FILE, head_prefixes::*},
+    internals::hash::commit_hash::CommitHash,
+};
 
-use crate::constants::{BASE_DIR_NAME, HEAD_FILE, head_prefixes::*};
+/// Special head commit.
+pub struct HeadCommit {
+    /// Reference type
+    prefix: HeadPrefix,
 
+    /// Path to which HEAD refers
+    path: PathBuf,
+}
+
+impl HeadCommit {
+    pub fn new(prefix: HeadPrefix, path: PathBuf) -> Self {
+        Self { prefix, path }
+    }
+
+    /// Reads the commit to which HEAD refers.
+    /// Goes to path and reads the commit.
+    pub fn read_commit(&self) -> CommitHash {
+        let mut buffer = String::new();
+        std::fs::File::open(&self.path)
+            .expect("Could not open file that HEAD references.")
+            .read_to_string(&mut buffer)
+            .unwrap();
+        todo!()
+    }
+}
+
+/// The prefix that is written to the gitrs/HEAD file before the path to the reference
 #[derive(Debug)]
 pub enum HeadPrefix {
     Ref,
@@ -24,7 +52,10 @@ impl HeadPrefix {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_str(mut s: &str) -> Option<Self> {
+        if let Some(s2) = s.strip_suffix(":") {
+            s = s2;
+        }
         match s {
             HEAD_REF_STR => Some(Self::Ref),
             HEAD_TAG_STR => Some(Self::Tag),
@@ -40,9 +71,9 @@ pub fn path_to_head_format(path: &Path, prefix: HeadPrefix) -> String {
 }
 
 /// Reads path stored in .gitrs/HEAD
-/// Usual format is "<prefix>: <path>\n"
+/// Usual format is "<prefix>: <path>\n" where prefix is a HeadPrefix
 /// Panics if the HEAD file is corrupted
-pub fn read_head_path() -> (HeadPrefix, PathBuf) {
+pub fn read_head_path() -> HeadCommit {
     let mut header_path = PathBuf::from(BASE_DIR_NAME);
     header_path.push(HEAD_FILE);
     let mut f = std::fs::File::open(header_path).expect("Corrupted HEAD file");
@@ -54,9 +85,9 @@ pub fn read_head_path() -> (HeadPrefix, PathBuf) {
     let path = PathBuf::from(parts[1]);
 
     match &(parts[0])[0..HEAD_PREFIX_LEN] {
-        HEAD_REF_STR => (HeadPrefix::Ref, path),
-        HEAD_TAG_STR => (HeadPrefix::Tag, path),
-        HEAD_RMT_STR => (HeadPrefix::Remote, path),
+        HEAD_REF_STR => HeadCommit::new(HeadPrefix::Ref, path),
+        HEAD_TAG_STR => HeadCommit::new(HeadPrefix::Tag, path),
+        HEAD_RMT_STR => HeadCommit::new(HeadPrefix::Remote, path),
         _ => panic!("Corrupted HEAD format"),
     }
 }

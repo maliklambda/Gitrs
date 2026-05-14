@@ -1,23 +1,3 @@
-pub const CLI_FLAG_PREFIX_SHORT: &str = "-";
-pub const CLI_FLAG_PREFIX_LONG: &str = "--";
-pub const SPACE: char = ' ';
-pub const EQUAL: char = '=';
-pub const NULL_HASH: &str = "NULL"; // TODO: change this to a real hash
-pub const DEFAULT_BRANCH: &str = "main";
-pub const BASE_DIR_NAME: &str = "gitrs";
-pub const CONFIG_FILE: &str = "gitrsconfig";
-pub const HEAD_FILE: &str = "HEAD";
-pub const REFS_DIR: &str = "refs";
-pub const HEADS_DIR: &str = "heads";
-
-/// Prefixed to the path held in .gitrs/HEAD
-pub mod head_prefixes {
-    pub const HEAD_PREFIX_LEN: usize = 3;
-    pub const HEAD_REF_STR: &str = "ref";
-    pub const HEAD_TAG_STR: &str = "tag";
-    pub const HEAD_RMT_STR: &str = "rmt";
-}
-
 macro_rules! register_const_mod {
     ($mod_name:ident, $($name:ident = $val:expr),* $(,)?) => {
         pub mod $mod_name {
@@ -40,6 +20,9 @@ register_const_mod!(
     CMD_COMMIT = "commit",
     CMD_LOG = "log",
     CMD_RESET = "reset",
+    CMD_HASH_FILE = "hash-file",
+    CMD_BUILD_TREE = "build-tree",
+    CMD_HASH_OBJECT = "hash-object",
 );
 
 register_const_mod!(
@@ -48,4 +31,8 @@ register_const_mod!(
     ALL_FLAG_L = "--all",
     MESSAGE_FLAG_S = "-m",
     MESSAGE_FLAG_L = "--message",
+    TYPE_FLAG_S = "-t",
+    TYPE_FLAG_L = "--type",
+    WRITE_FLAG_S = "-w",
+    WRITE_FLAG_L = "--write",
 );

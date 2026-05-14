@@ -12,13 +12,22 @@ pub enum Token<'a> {
 }
 
 #[derive(Debug)]
-pub enum ParseCliError {
-    InvalidToken(String),
+pub enum ParseCliError<'a> {
+    InvalidToken(Token<'a>),
     UnknownFlag(String),
     MissingCommand,
-    InvalidCommand(String),
-    InvalidArgument {
-        cmd: &'static str,
-        invalid_arg: String,
+    MissingArgument(&'static str),
+    MissingValueForArg {
+        arg: Token<'a>,
     },
+    InvalidCommand(String),
+    InvalidArgumentForCommand {
+        cmd: &'static str,
+        invalid_arg: Token<'a>,
+    },
+    InvalidValue {
+        arg_name: &'static str,
+        value: Token<'a>,
+    },
+    TooManyArguments,
 }

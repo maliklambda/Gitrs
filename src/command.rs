@@ -1,3 +1,5 @@
+use crate::{cli::Token, internals::objects::ObjectType};
+
 /// All allowed commands are specified here
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command<'a> {
@@ -18,4 +20,17 @@ pub enum Command<'a> {
 
     /// Remove a file from staging.
     Reset { files: Vec<&'a str> },
+
+    /// Hashes a file
+    HashFile { filename: Token<'a> },
+
+    /// Builds a tree-representation of the tracked directory
+    BuildTree,
+
+    /// Hash an object
+    HashObject {
+        tp: ObjectType,
+        value: &'a str,
+        write: bool,
+    },
 }
