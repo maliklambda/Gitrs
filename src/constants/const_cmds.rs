@@ -23,6 +23,7 @@ register_const_mod!(
     CMD_HASH_FILE = "hash-file",
     CMD_BUILD_TREE = "build-tree",
     CMD_HASH_OBJECT = "hash-object",
+    CMD_CAT_FILE = "cat-file",
 );
 
 register_const_mod!(
@@ -35,4 +36,6 @@ register_const_mod!(
     TYPE_FLAG_L = "--type",
     WRITE_FLAG_S = "-w",
     WRITE_FLAG_L = "--write",
+    PRETTY_PRINT_FLAG_S = "-p",
+    SIZE_FLAG_S = "-s",
 );

@@ -1,19 +1,12 @@
-use std::{fs::File, os::unix::ffi::OsStrExt, path::PathBuf};
-
-use log::info;
-
-use crate::{
-    constants::{BASE_DIR_NAME, OBJECTS_DIR},
-    internals::{
-        hash::commit_hash::CommitHash,
-        objects::{commit::Commit, file::FileContent, tree::GitrsTree},
-    },
-};
-
+pub mod cat_file;
 pub mod commit;
 pub mod file;
 pub mod tree;
 pub mod write_object;
+
+use std::os::unix::ffi::OsStrExt;
+
+use crate::internals::objects::{commit::Commit, file::FileContent, tree::GitrsTree};
 
 /// Object enum without any values associated with a type.
 /// Must have the same variants as struct Object.

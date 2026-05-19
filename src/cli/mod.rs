@@ -8,13 +8,12 @@ pub enum Token<'a> {
     TString(&'a str),
     TFlag(&'a str),
     TCommand(&'a str),
-    TEOF,
 }
 
 #[derive(Debug)]
 pub enum ParseCliError<'a> {
     InvalidToken(Token<'a>),
-    UnknownFlag(String),
+    UnknownFlag(&'a str),
     MissingCommand,
     MissingArgument(&'static str),
     MissingValueForArg {

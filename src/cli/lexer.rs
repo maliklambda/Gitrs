@@ -10,8 +10,10 @@ use crate::{
     },
 };
 
+pub type TokenArray<'a> = VecDeque<Token<'a>>;
+
 pub struct Lexer<'a> {
-    pub tokens: VecDeque<Token<'a>>,
+    pub tokens: TokenArray<'a>,
 }
 
 impl<'a> Lexer<'a> {
@@ -21,12 +23,16 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn next(&mut self) -> Token<'_> {
-        self.tokens.pop_front().unwrap_or(Token::TEOF)
+    pub fn next(&mut self) -> Option<Token<'a>> {
+        self.tokens.pop_front()
     }
 
-    pub fn peek(&mut self) -> Token<'_> {
-        self.tokens.iter().last().copied().unwrap_or(Token::TEOF)
+    pub fn peek(&self) -> Option<Token<'a>> {
+        self.tokens.iter().nth(0).copied()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.peek().is_none()
     }
 
     /// Build tokens from raw arguments.

@@ -8,7 +8,7 @@ use crate::{
     constants::CONTENT_DIR,
     gitrs::Gitrs,
     internals::{
-        hash::{hash_blob::hash_file_content, hash_object},
+        hash::{HashObjectConfig, hash_blob::hash_file_content, hash_object},
         objects::tree::GitrsTree,
     },
 };
@@ -26,7 +26,7 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
             info!("Initialization successfull. You are now on branch '{default_branch}'");
         }
         Command::Status => {
-            let gitrs = Gitrs::init_existing().unwrap();
+            let _gitrs = Gitrs::init_existing().unwrap();
             // gitrs.status(cmd);
         }
         Command::HashFile { filename } => {
@@ -41,8 +41,8 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
             let tree = GitrsTree::build_tree(Path::new(CONTENT_DIR)).unwrap();
             info!("Built tree: {:?}", tree);
         }
-        Command::HashObject { tp, value, write } => {
-            let h = hash_object(tp, value, write).unwrap();
+        Command::HashObject(ho_config) => {
+            let h = hash_object(ho_config).unwrap();
             info!("hash: {h}");
             // todo!("Hash object: {value} of type {:?}; write = {:?}", tp, write);
         }

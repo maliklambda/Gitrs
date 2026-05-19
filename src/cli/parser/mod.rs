@@ -1,7 +1,12 @@
+pub mod parse_cat_file;
 pub mod parse_hash_object;
 
 use crate::{
-    cli::{ParseCliError, Token, lexer::Lexer, parser::parse_hash_object::parse_hash_object},
+    cli::{
+        ParseCliError, Token,
+        lexer::Lexer,
+        parser::{parse_cat_file::parse_cat_file, parse_hash_object::parse_hash_object},
+    },
     command::Command,
     constants::{DEFAULT_BRANCH, const_cmds::keywords::*},
 };
@@ -17,8 +22,11 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub fn parse(&mut self) -> Result<Command<'_>, ParseCliError<'_>> {
-        if let Token::TCommand(cmd) = self.lexer.next() {
+    pub fn parse<'b>(&'a mut self) -> Result<Command<'b>, ParseCliError<'b>>
+    where
+        'a: 'b,
+    {
+        if let Some(Token::TCommand(cmd)) = self.lexer.next() {
             return match cmd {
                 CMD_STATUS => self.parse_status(),
                 CMD_ADD => self.parse_add(),
@@ -28,7 +36,8 @@ impl<'a> Parser<'a> {
                 CMD_INIT => self.parse_init(),
                 CMD_HASH_FILE => self.parse_hash_file(),
                 CMD_BUILD_TREE => self.parse_build_tree(),
-                CMD_HASH_OBJECT => parse_hash_object(&mut self.lexer.tokens),
+                CMD_HASH_OBJECT => self.parse_hash_object(),
+                CMD_CAT_FILE => self.parse_cat_file(),
                 _ => Err(ParseCliError::InvalidCommand(cmd.to_string())),
             };
         }
@@ -36,10 +45,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_status(&mut self) -> Result<Command<'_>, ParseCliError<'_>> {
-        if !self.lexer.tokens.is_empty() {
+        if !self.lexer.is_empty() {
             return Err(ParseCliError::InvalidArgumentForCommand {
                 cmd: CMD_STATUS,
-                invalid_arg: self.lexer.next(),
+                invalid_arg: self.lexer.next().unwrap(),
             });
         }
         Ok(Command::Status)
@@ -62,10 +71,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_init(&mut self) -> Result<Command<'_>, ParseCliError<'_>> {
-        if !self.lexer.tokens.is_empty() {
+        if !self.lexer.is_empty() {
             return Err(ParseCliError::InvalidArgumentForCommand {
                 cmd: CMD_INIT,
-                invalid_arg: self.lexer.next(),
+                invalid_arg: self.lexer.next().unwrap(),
             });
         }
         Ok(Command::Init {
@@ -76,7 +85,7 @@ impl<'a> Parser<'a> {
     fn parse_hash_file(&'_ mut self) -> Result<Command<'_>, ParseCliError<'_>> {
         if self.lexer.tokens.len() > 1 {
             return Err(ParseCliError::TooManyArguments);
-        } else if self.lexer.tokens.is_empty() {
+        } else if self.lexer.is_empty() {
             return Err(ParseCliError::MissingArgument("Filename"));
         }
         Ok(Command::HashFile {
@@ -85,9 +94,17 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_build_tree(&mut self) -> Result<Command<'_>, ParseCliError<'_>> {
-        if !self.lexer.tokens.is_empty() {
+        if !self.lexer.is_empty() {
             return Err(ParseCliError::TooManyArguments);
         }
         Ok(Command::BuildTree)
+    }
+
+    fn parse_hash_object(&'a mut self) -> Result<Command<'a>, ParseCliError<'a>> {
+        parse_hash_object(&mut self.lexer)
+    }
+
+    fn parse_cat_file(&'a mut self) -> Result<Command<'a>, ParseCliError<'a>> {
+        parse_cat_file(&mut self.lexer)
     }
 }

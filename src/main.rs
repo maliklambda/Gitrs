@@ -4,6 +4,7 @@ pub mod cli;
 pub mod command;
 pub mod config;
 pub mod constants;
+mod examples;
 pub mod execute;
 pub mod gitrs;
 pub mod internals;

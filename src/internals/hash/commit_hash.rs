@@ -7,9 +7,9 @@ use std::{
 /// Any gitrs hashing is done via a CommitHash (not just commits, also blobs, trees, etc.)
 /// Wraps the hash in a struct field to allow impl blocks below
 /// Called "CommitHash" instead of "Hash" to avoid ambiguity with stdlib Hash
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct CommitHash {
-    hash: u64,
+    pub hash: u64,
 }
 
 impl std::fmt::Display for CommitHash {

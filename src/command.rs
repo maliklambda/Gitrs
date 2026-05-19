@@ -1,4 +1,7 @@
-use crate::{cli::Token, internals::objects::ObjectType};
+use crate::{
+    cli::Token,
+    internals::{hash::HashObjectConfig, objects::cat_file::CatFileConfig},
+};
 
 /// All allowed commands are specified here
 #[derive(Debug, Clone, PartialEq)]
@@ -28,9 +31,8 @@ pub enum Command<'a> {
     BuildTree,
 
     /// Hash an object
-    HashObject {
-        tp: ObjectType,
-        value: &'a str,
-        write: bool,
-    },
+    HashObject(HashObjectConfig<'a>),
+
+    /// Get the contents of an object by its hash
+    CatFile(CatFileConfig),
 }
