@@ -1,6 +1,7 @@
 use std::{
     fs::{File, OpenOptions},
-    path::Path,
+    io::Read,
+    path::{Path, PathBuf},
 };
 
 use log::{debug, info};
@@ -12,8 +13,9 @@ use crate::{
     execute::ExecuteError,
     internals::{
         branch::Branch,
+        hash::commit_hash::CommitHash,
         head::{HeadPrefix, read_head_path, write_head_path},
-        objects::commit::Commit,
+        objects::{Object, commit::Commit},
         stage::Stage,
     },
 };
@@ -37,6 +39,9 @@ pub struct Gitrs<'a> {
 
     /// Keep all staged changes
     stage: Stage,
+    // /// Keep the path to the objects directory
+    // /// This is done to speed up queries from the objects
+    // objects_path: Path,
 }
 
 impl<'a> Gitrs<'a> {
@@ -140,9 +145,20 @@ impl<'a> Gitrs<'a> {
         }
         let head_commit = read_head_commit().unwrap();
 
-        // let config =
-
         todo!();
+    }
+
+    /// Finds an object by its hash
+    /// Object must be written to the objects/ dir
+    pub fn find_object_by_hash(h: CommitHash) -> Result<Object, std::io::Error> {
+        let mut path = PathBuf::from(BASE_DIR_NAME);
+        path.extend([OBJECTS_DIR, &h.to_string()]);
+        let bytes = {
+            let mut buf = vec![];
+            File::open(path)?.read_to_end(&mut buf)?;
+            buf
+        };
+        Ok(Object::from_bytes(bytes).expect("Invalid Object conversion"))
     }
 }
 

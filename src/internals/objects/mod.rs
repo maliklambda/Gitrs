@@ -61,7 +61,11 @@ impl Object {
             Object::Blob(fc) => {
                 // Structure of Blob content:
                 // | filename | \0 (to signal end of filename) | file content |
-                let fname = fc.fname.to_owned();
+                let fname: String = fc
+                    .fname
+                    .to_owned()
+                    .into_string()
+                    .expect("OS String into String");
                 let name = fname.as_bytes();
                 v.extend(name);
                 v.push(b'\0'); // \0 to signale end of filename
@@ -72,6 +76,7 @@ impl Object {
         }
     }
 
+    /// Serialize an object to bytes
     pub fn from_bytes(bytes: Vec<u8>) -> Option<Self> {
         match ObjectType::from_u8(*bytes.first()?)? {
             ObjectType::Blob => {
@@ -90,6 +95,11 @@ impl Object {
         }
     }
 
+    /// Convert an object to bytes and return its size
+    pub fn size(&self) -> usize {
+        self.to_bytes().len()
+    }
+
     /// Returns the corresponding object type without a value associated with it.
     /// This is usefull for e.g. converting it to a u8 for binary storage.
     pub fn to_object_type(&self) -> ObjectType {
@@ -99,6 +109,17 @@ impl Object {
             Object::Tree(_) => ObjectType::Tree,
         }
     }
+
+    /// Returns pretty printed version of the object's content
+    pub fn content(&self) -> String {
+        match self {
+            Object::Blob(fc) => {
+                fc.content.to_string()
+            }
+            _ => todo!("Pretty print content for {:?}", self)
+        }
+    }
+
 }
 
 #[test]

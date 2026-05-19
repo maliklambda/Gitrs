@@ -7,7 +7,7 @@ use std::{
 /// Any gitrs hashing is done via a CommitHash (not just commits, also blobs, trees, etc.)
 /// Wraps the hash in a struct field to allow impl blocks below
 /// Called "CommitHash" instead of "Hash" to avoid ambiguity with stdlib Hash
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct CommitHash {
     pub hash: u64,
 }
@@ -30,5 +30,9 @@ impl CommitHash {
 
     pub fn to_path_buf(&self) -> PathBuf {
         PathBuf::from(&self.hash.to_string())
+    }
+
+    pub fn to_str(&self) -> String {
+        self.hash.to_string()
     }
 }

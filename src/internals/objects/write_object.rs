@@ -12,14 +12,14 @@ pub fn write_object(obj: Object) -> Result<(), std::io::Error> {
     path.push(OBJECTS_DIR);
 
     match obj {
-        Object::Blob(fc) => {
+        Object::Blob(ref fc) => {
             let h = CommitHash::new(&fc.content);
             path.push(h.to_path_buf());
             info!("Writing blob to {:?}", path);
             if !path.exists() {
                 let mut f = File::create_new(&path)?;
-                f.write_all(fc.content.as_bytes())?;
-                info!("Wrote successfully to {:?}", path);
+                f.write_all(&obj.to_bytes())?;
+                info!("Wrote {:?} successfully to {:?}", obj, path);
             } else {
                 info!("File {:?} already exists", path);
             }

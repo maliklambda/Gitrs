@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use log::info;
+use log::{debug, info};
 
 use crate::{
     cli::Token,
@@ -8,21 +8,25 @@ use crate::{
     constants::CONTENT_DIR,
     gitrs::Gitrs,
     internals::{
-        hash::{HashObjectConfig, hash_blob::hash_file_content, hash_object},
-        objects::tree::GitrsTree,
+        hash::{commit_hash::CommitHash, hash_blob::hash_file_content, hash_object},
+        objects::{cat_file::CatFileMode, tree::GitrsTree},
     },
 };
 
 #[derive(Debug)]
 pub enum ExecuteError {
+    /// Any error that occurs during Initialization
     InitError { msg: String },
+
+    ///
+    NonExistingHash { hash: CommitHash },
 }
 
 pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
     info!("Executing command: {:?}", cmd);
     match cmd {
         Command::Init { default_branch } => {
-            Gitrs::init_new(cmd).unwrap();
+            Gitrs::init_new(cmd)?;
             info!("Initialization successfull. You are now on branch '{default_branch}'");
         }
         Command::Status => {
@@ -44,7 +48,19 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
         Command::HashObject(ho_config) => {
             let h = hash_object(ho_config).unwrap();
             info!("hash: {h}");
-            // todo!("Hash object: {value} of type {:?}; write = {:?}", tp, write);
+        }
+        Command::CatFile(cat_file_config) => {
+            let obj = Gitrs::find_object_by_hash(cat_file_config.value).map_err(|_| {
+                ExecuteError::NonExistingHash {
+                    hash: cat_file_config.value,
+                }
+            })?;
+            debug!("Returned object: {:?}", obj);
+            match cat_file_config.flags {
+                CatFileMode::Type => println!("{:?}", obj.to_object_type()),
+                CatFileMode::Size => println!("{}", obj.size()),
+                CatFileMode::PrettyPrint => println!("{}", obj.content()),
+            }
         }
         _ => todo!("Execution for command: {:?}", cmd),
     }

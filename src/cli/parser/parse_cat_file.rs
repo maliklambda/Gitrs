@@ -7,7 +7,7 @@ use crate::{
     },
     internals::{
         hash::commit_hash::CommitHash,
-        objects::cat_file::{CatFileConfig, CatFileFlags},
+        objects::cat_file::{CatFileConfig, CatFileMode},
     },
 };
 
@@ -43,12 +43,12 @@ where
     Ok(Command::CatFile(CatFileConfig::new(value, flags)))
 }
 
-fn parse_cat_file_flags<'a>(lexer: &mut Lexer<'a>) -> Result<CatFileFlags, ParseCliError<'a>> {
+fn parse_cat_file_flags<'a>(lexer: &mut Lexer<'a>) -> Result<CatFileMode, ParseCliError<'a>> {
     if let Some(Token::TFlag(flag)) = lexer.next() {
         match flag {
-            TYPE_FLAG_S => Ok(CatFileFlags::Type),
-            PRETTY_PRINT_FLAG_S => Ok(CatFileFlags::PrettyPrint),
-            SIZE_FLAG_S => Ok(CatFileFlags::Size),
+            TYPE_FLAG_S => Ok(CatFileMode::Type),
+            PRETTY_PRINT_FLAG_S => Ok(CatFileMode::PrettyPrint),
+            SIZE_FLAG_S => Ok(CatFileMode::Size),
             _ => Err(ParseCliError::UnknownFlag(flag)),
         }
     } else {

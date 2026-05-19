@@ -15,5 +15,9 @@ fn main() {
     let args = &args[2..];
     let mut parser = Parser::new(args).unwrap();
     let cmd = parser.parse().unwrap();
-    execute(cmd).unwrap()
+
+    match execute(cmd) {
+        Ok(_) => (),
+        Err(err) => println!("Runtime error: {:?}", err),
+    }
 }

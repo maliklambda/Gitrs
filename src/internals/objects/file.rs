@@ -10,8 +10,7 @@ pub struct FileContent {
 }
 
 impl FileContent {
-    pub fn from_file(mut f: File) -> Result<Self, std::io::Error> {
-        let fname = "";
+    pub fn from_file(fname: &str, mut f: File) -> Result<Self, std::io::Error> {
         let mut content = String::new();
         f.read_to_string(&mut content)?;
         Ok(Self {

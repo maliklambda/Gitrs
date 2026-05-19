@@ -2,18 +2,18 @@ use crate::internals::hash::commit_hash::CommitHash;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CatFileConfig {
-    value: CommitHash,
-    flags: CatFileFlags,
+    pub value: CommitHash,
+    pub flags: CatFileMode,
 }
 
 impl CatFileConfig {
-    pub fn new(value: CommitHash, flags: CatFileFlags) -> Self {
+    pub fn new(value: CommitHash, flags: CatFileMode) -> Self {
         Self { value, flags }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum CatFileFlags {
+pub enum CatFileMode {
     /// Display the type of an object
     Type,
 
