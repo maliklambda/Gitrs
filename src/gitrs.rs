@@ -155,7 +155,8 @@ impl<'a> Gitrs<'a> {
         path.extend([OBJECTS_DIR, &h.to_string()]);
         let bytes = {
             let mut buf = vec![];
-            File::open(path)?.read_to_end(&mut buf)?;
+            File::open(&path)?.read_to_end(&mut buf)?;
+            debug!("Read {} byts from {:?}", buf.len(), &path);
             buf
         };
         Ok(Object::from_bytes(bytes).expect("Invalid Object conversion"))

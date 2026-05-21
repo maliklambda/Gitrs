@@ -4,14 +4,15 @@ pub mod file;
 pub mod tree;
 pub mod write_object;
 
-use std::os::unix::ffi::OsStrExt;
+use log::{debug, info};
+use serde::{Deserialize, Serialize};
 
-use crate::internals::objects::{commit::Commit, file::FileContent, tree::GitrsTree};
+use crate::internals::objects::{commit::Commit, file::FileContent, tree::{FileTree, GitrsTree}};
 
 /// Object enum without any values associated with a type.
 /// Must have the same variants as struct Object.
 /// Check out the -t flag at https://git-scm.com/docs/git-hash-object
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum ObjectType {
     Commit,
     Blob,
@@ -78,7 +79,7 @@ impl Object {
 
     /// Serialize an object to bytes
     pub fn from_bytes(bytes: Vec<u8>) -> Option<Self> {
-        match ObjectType::from_u8(*bytes.first()?)? {
+        match ObjectType::from_u8(*bytes.first().expect("Trying to build object from empty vector"))? {
             ObjectType::Blob => {
                 let (fname, idx) = {
                     let i = bytes.iter().position(|b| *b == b'\0')?;
@@ -90,6 +91,11 @@ impl Object {
                     fname: fname.into(),
                     content,
                 }))
+            }
+            ObjectType::Tree => {
+                let ft = FileTree::from_bytes(bytes).unwrap();
+                debug!("ft: {:?}", ft);
+                todo!("finish here");
             }
             _ => todo!("bytes -> Object"),
         }
@@ -113,13 +119,10 @@ impl Object {
     /// Returns pretty printed version of the object's content
     pub fn content(&self) -> String {
         match self {
-            Object::Blob(fc) => {
-                fc.content.to_string()
-            }
-            _ => todo!("Pretty print content for {:?}", self)
+            Object::Blob(fc) => fc.content.to_string(),
+            _ => todo!("Pretty print content for {:?}", self),
         }
     }
-
 }
 
 #[test]

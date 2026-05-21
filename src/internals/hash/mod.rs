@@ -1,10 +1,13 @@
-use crate::internals::{
-    hash::{commit_hash::CommitHash, hash_blob::hash_blob},
-    objects::{Object, ObjectType, write_object::write_object},
-};
-
 pub mod commit_hash;
 pub mod hash_blob;
+pub mod hash_tree;
+
+use log::debug;
+
+use crate::internals::{
+    hash::{commit_hash::CommitHash, hash_blob::hash_blob, hash_tree::hash_tree},
+    objects::{Object, ObjectType, write_object::write_object},
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct HashObjectConfig<'a> {
@@ -38,6 +41,21 @@ pub fn hash_object(
             let (h, fc) = hash_blob(value).unwrap();
             if flags.write {
                 write_object(Object::Blob(fc))?;
+            }
+            Ok(h)
+        }
+        ObjectType::Tree => {
+            let (h, t) = hash_tree(value).unwrap();
+
+            // for debug
+            let (_, fs) = t.to_file_trees();
+            for st in fs {
+                debug!("file Tree: {:?}", st);
+            }
+            // end debug
+
+            if flags.write {
+                write_object(Object::Tree(t.clone()))?;
             }
             Ok(h)
         }

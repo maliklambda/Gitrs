@@ -16,10 +16,13 @@ use crate::{
 #[derive(Debug)]
 pub enum ExecuteError {
     /// Any error that occurs during Initialization
-    InitError { msg: String },
+    InitError {
+        msg: String,
+    },
 
-    ///
-    NonExistingHash { hash: CommitHash },
+    NonExistingHash {
+        hash: CommitHash,
+    },
 }
 
 pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
