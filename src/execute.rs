@@ -9,7 +9,10 @@ use crate::{
     gitrs::Gitrs,
     internals::{
         hash::{commit_hash::CommitHash, hash_blob::hash_file_content, hash_object},
-        objects::{cat_file::CatFileMode, tree::GitrsTree},
+        objects::{
+            cat_file::CatFileMode,
+            tree::{FileTree, GitrsTree},
+        },
     },
 };
 
@@ -45,7 +48,8 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
             }
         }
         Command::BuildTree => {
-            let tree = GitrsTree::build_tree(Path::new(CONTENT_DIR)).unwrap();
+            // let tree = GitrsTree::build_tree(Path::new(CONTENT_DIR)).unwrap();
+            let tree = FileTree::build_initial(Path::new(CONTENT_DIR)).unwrap();
             info!("Built tree: {:?}", tree);
         }
         Command::HashObject(ho_config) => {

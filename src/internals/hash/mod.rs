@@ -45,19 +45,13 @@ pub fn hash_object(
             Ok(h)
         }
         ObjectType::Tree => {
-            let (h, t) = hash_tree(value).unwrap();
-
-            // for debug
-            let (_, fs) = t.to_file_trees();
-            for st in fs {
-                debug!("file Tree: {:?}", st);
-            }
-            // end debug
+            let root = hash_tree(value).unwrap();
+            let hash = root.to_hash();
 
             if flags.write {
-                write_object(Object::Tree(t.clone()))?;
+                write_object(Object::Tree(root))?;
             }
-            Ok(h)
+            Ok(hash)
         }
         _ => todo!("Hash object other than blob"),
     }

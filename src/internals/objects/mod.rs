@@ -7,7 +7,11 @@ pub mod write_object;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
-use crate::internals::objects::{commit::Commit, file::FileContent, tree::{FileTree, GitrsTree}};
+use crate::internals::objects::{
+    commit::Commit,
+    file::FileContent,
+    tree::{FileTree, GitrsTree},
+};
 
 /// Object enum without any values associated with a type.
 /// Must have the same variants as struct Object.
@@ -48,8 +52,9 @@ pub enum Object {
     /// A snapshot of the working tree
     Commit(Commit),
 
-    /// a directory listing
-    Tree(GitrsTree),
+    /// a directory listing.
+    /// GitrsTree (== full tree in memory) is used for initial calculation
+    Tree(FileTree),
 }
 
 impl Object {
@@ -79,7 +84,11 @@ impl Object {
 
     /// Serialize an object to bytes
     pub fn from_bytes(bytes: Vec<u8>) -> Option<Self> {
-        match ObjectType::from_u8(*bytes.first().expect("Trying to build object from empty vector"))? {
+        match ObjectType::from_u8(
+            *bytes
+                .first()
+                .expect("Trying to build object from empty vector"),
+        )? {
             ObjectType::Blob => {
                 let (fname, idx) = {
                     let i = bytes.iter().position(|b| *b == b'\0')?;
@@ -95,7 +104,7 @@ impl Object {
             ObjectType::Tree => {
                 let ft = FileTree::from_bytes(bytes).unwrap();
                 debug!("ft: {:?}", ft);
-                todo!("finish here");
+                Some(Self::Tree(ft))
             }
             _ => todo!("bytes -> Object"),
         }

@@ -6,7 +6,7 @@ use crate::{
     constants::{BASE_DIR_NAME, OBJECTS_DIR},
     internals::{
         hash::commit_hash::CommitHash,
-        objects::{Object, tree::FileTree},
+        objects::{Object, ObjectType, tree::{FileTree, FileTreeNode}},
     },
 };
 
@@ -28,12 +28,11 @@ pub fn write_object(obj: Object) -> Result<(), std::io::Error> {
             }
             Ok(())
         }
-        Object::Tree(ref tree) => {
-            let (_, fts) = tree.to_file_trees();
+        Object::Tree(ref ft) => {
             info!("Writing tree to {:?}", path);
-            for ft in fts {
-                debug!("Writing ft to file: {:?}", &ft);
-                write_ft(ft, path.clone()).unwrap();
+            write_ft(ft, path.clone()).unwrap();
+            for child in ft.children.as_ref().unwrap() {
+                write_ft(child, path.clone()).unwrap();
             }
             Ok(())
         }
@@ -43,7 +42,7 @@ pub fn write_object(obj: Object) -> Result<(), std::io::Error> {
 
 /// Write a file node to file
 /// Expects path to NOT contain the FileTree's hash, as it is appended below
-fn write_ft(ft: FileTree, mut path: PathBuf) -> Result<(), std::io::Error> {
+fn write_ft(ft: &FileTree, mut path: PathBuf) -> Result<(), std::io::Error> {
     path.push(ft.to_hash().to_str());
     if !path.exists() {
         let bytes = ft.to_bytes();
@@ -55,3 +54,25 @@ fn write_ft(ft: FileTree, mut path: PathBuf) -> Result<(), std::io::Error> {
     }
     Ok(())
 }
+
+fn write_ft_node(node: &FileTreeNode, mut path: PathBuf) -> Result<(), std::io::Error> {
+    path.push(node.hash.to_str());
+    if path.exists() {
+        debug!("Unchanged hash ({}) for {:?}", node.hash.to_str(), node);
+        return Ok(())
+    }
+    debug!("Writing node to file: {:?}", node);
+
+    match node.object_type {
+        ObjectType::Tree => {
+            let ft = FileTree::from_hash(node.hash).unwrap();
+            write_ft(&ft, path)
+        }
+        ObjectType::Blob => {
+            todo!("Write filetreenode::blob");
+        }
+        ObjectType::Commit => todo!("handle commit in write ft node"),
+    }
+}
+
+

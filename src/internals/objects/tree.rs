@@ -1,15 +1,19 @@
 use std::{
     ffi::OsString,
     fs::{DirEntry, read_dir},
-    path::Path,
+    io::Read,
+    path::{Path, PathBuf},
 };
 
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
-use crate::internals::{
-    hash::{commit_hash::CommitHash, hash_blob::hash_file_content},
-    objects::ObjectType,
+use crate::{
+    constants::{BASE_DIR_NAME, OBJECTS_DIR},
+    internals::{
+        hash::{commit_hash::CommitHash, hash_blob::hash_file_content},
+        objects::ObjectType,
+    },
 };
 
 /// A snapshot of the file system.
@@ -23,6 +27,7 @@ pub struct GitrsTree {
 
 impl GitrsTree {
     /// Build in-memory GitrsTree from existing files.
+    /// This is the initial build. It assumes no existing files in gitrs/objects/
     pub fn build_tree(path: &Path) -> Result<Self, std::io::Error> {
         debug!("Building (sub-)tree from path: {:?}", path);
         let dir = read_dir(path).unwrap();
@@ -63,7 +68,10 @@ impl GitrsTree {
                 }
             }
         }
-        let new_ft = FileTree { values: ftns };
+        let new_ft = FileTree {
+            values: ftns,
+            children: None,
+        };
         let hash = new_ft.to_hash();
         trees.push(new_ft);
         FileTreeNode {
@@ -80,11 +88,10 @@ impl GitrsTree {
         CommitHash::new(&s)
     }
 
-
     /// Takes a file tree (that is presumably read from a file) and builds a GitrsTree from that.
-    /// For the full tree, the objects that are given as a hash will need to be pulled recursively 
+    /// For the full tree, the objects that are given as a hash will need to be pulled recursively
     /// from their respective files.
-    pub fn from_file_tree(ft: FileTree) -> Result<Self, std::io::Error> {
+    pub fn from_file_tree(_ft: FileTree) -> Result<Self, std::io::Error> {
         todo!("filetree -> gitrstree");
     }
 }
@@ -141,14 +148,31 @@ impl TreeNode {
 /// GitrsTree representaion on file.
 /// Instead of recursive tree references, the hash of the subtree is kept.
 /// References to files do not much change.
-#[derive(Debug, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Default, PartialEq, Clone)]
 pub struct FileTree {
+    /// Immediate children.
+    /// Only chained by hash value
     pub values: Vec<FileTreeNode>,
+
+    /// In memory version of all of the FT's children
+    pub children: Option<Vec<FileTree>>,
 }
 
 impl FileTree {
     pub const FT_NODE_SEPARATOR: u8 = b'\n';
 
+    /// Builds a tree from an existing directory.
+    /// Assumes that gitrs/objects/ is empty (no existing object files).
+    /// Return value: Self + its children where Self is the very last item in the return vec
+    pub fn build_initial(path: &Path) -> Result<Self, std::io::Error> {
+        let gitrs_tree = GitrsTree::build_tree(path)?;
+        let (_, mut fts) = gitrs_tree.to_file_trees();
+        let mut root = fts.pop().unwrap();
+        root.children = Some(fts);
+        Ok(root)
+    }
+
+    /// Compute a filetree's hash
     pub fn to_hash(&self) -> CommitHash {
         CommitHash::new(
             str::from_utf8(
@@ -162,6 +186,30 @@ impl FileTree {
         )
     }
 
+    /// Takes a hash and tries to read the ft from file.
+    /// File is identified by the hash.
+    pub fn from_hash(h: CommitHash) -> Result<Self, String> {
+        let hash_str = h.to_str();
+
+        let mut path = PathBuf::from(BASE_DIR_NAME);
+        path.extend([OBJECTS_DIR, &hash_str]);
+
+        if !path.exists() {
+            return Err(format!(
+                "Cannot build FileTree from {hash_str}: Path {:?} does not exist.",
+                path
+            ));
+        }
+
+        let mut bytes: Vec<u8> = vec![];
+        std::fs::File::open(path)
+            .unwrap()
+            .read_to_end(&mut bytes)
+            .unwrap();
+        Ok(Self::from_bytes(bytes).unwrap())
+    }
+
+    /// | FileTreeNode 0 | FT_NODE_SEPARATOR (1 byte) | FileTreeNode 1 | FT_NODE_SEPARATOR | ... | FT_NODE_SEPARATOR | FileTreeNode n |
     pub fn to_bytes(&self) -> Vec<u8> {
         self.values
             .iter()
@@ -184,11 +232,14 @@ impl FileTree {
                 }
             })
             .collect();
-        Ok(Self { values })
+        Ok(Self {
+            values,
+            children: None,
+        })
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct FileTreeNode {
     // /// file/dir permissions
     // permissions: u32,
@@ -262,7 +313,10 @@ fn file_tree_serialization() {
             filename: String::from("file.txt"),
         },
     ];
-    let ft = FileTree { values: ft_nodes };
+    let ft = FileTree {
+        values: ft_nodes,
+        children: None,
+    };
     let bytes = ft.to_bytes();
     let ft_new = FileTree::from_bytes(bytes).expect("Failed to convert: bytes -> FT");
     assert_eq!(ft, ft_new);
