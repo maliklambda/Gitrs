@@ -8,10 +8,10 @@ use crate::{
     constants::CONTENT_DIR,
     gitrs::Gitrs,
     internals::{
-        hash::{commit_hash::CommitHash, hash_blob::hash_file_content, hash_object},
+        hash::{commit_hash::CommitHash, hash_object},
         objects::{
             cat_file::CatFileMode,
-            tree::{FileTree, GitrsTree},
+            tree::FileTree,
         },
     },
 };
@@ -43,8 +43,9 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
             if let Token::TString(fname) = filename {
                 let mut path = PathBuf::from(CONTENT_DIR);
                 path.push(fname);
-                let h = hash_file_content(&path).unwrap();
-                info!("Hashed file {fname}: {:?}", h);
+                todo!("remove hash file command");
+                // let h = hash_file_content(&path).unwrap();
+                // info!("Hashed file {fname}: {:?}", h);
             }
         }
         Command::BuildTree => {
@@ -57,16 +58,18 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
             info!("hash: {h}");
         }
         Command::CatFile(cat_file_config) => {
-            let obj = Gitrs::find_object_by_hash(cat_file_config.value).map_err(|_| {
-                ExecuteError::NonExistingHash {
-                    hash: cat_file_config.value,
+            for value in cat_file_config.values {
+                let obj = Gitrs::find_object_by_hash(value).map_err(|_| {
+                    ExecuteError::NonExistingHash {
+                        hash: value,
+                    }
+                })?;
+                debug!("Returned object: {:?}", obj);
+                match cat_file_config.flags {
+                    CatFileMode::Type => println!("{:?}", obj.to_object_type()),
+                    CatFileMode::Size => println!("{}", obj.size()),
+                    CatFileMode::PrettyPrint => println!("{}", obj.content()),
                 }
-            })?;
-            debug!("Returned object: {:?}", obj);
-            match cat_file_config.flags {
-                CatFileMode::Type => println!("{:?}", obj.to_object_type()),
-                CatFileMode::Size => println!("{}", obj.size()),
-                CatFileMode::PrettyPrint => println!("{}", obj.content()),
             }
         }
         _ => todo!("Execution for command: {:?}", cmd),

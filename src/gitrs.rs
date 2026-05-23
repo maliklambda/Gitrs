@@ -159,6 +159,7 @@ impl<'a> Gitrs<'a> {
             debug!("Read {} byts from {:?}", buf.len(), &path);
             buf
         };
+        debug!("Bytes: {:?}", bytes);
         Ok(Object::from_bytes(bytes).expect("Invalid Object conversion"))
     }
 }

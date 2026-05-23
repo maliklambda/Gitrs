@@ -78,6 +78,14 @@ impl Object {
                 v.extend(fc.content.as_bytes()); // TODO: compress file content
                 v
             }
+            Object::Tree(ft) => {
+                // Structure of Tree content:
+                // | Tree |
+                debug!("V before: {:?}", v);
+                v.extend(ft.to_bytes());
+                debug!("V after: {:?}", v);
+                v
+            }
             _ => todo!("Object {:?} -> bytes", self),
         }
     }
@@ -90,6 +98,7 @@ impl Object {
                 .expect("Trying to build object from empty vector"),
         )? {
             ObjectType::Blob => {
+                debug!("Object is Blob");
                 let (fname, idx) = {
                     let i = bytes.iter().position(|b| *b == b'\0')?;
                     let s = String::from_utf8(bytes[1..i].to_vec()).unwrap();
@@ -102,7 +111,8 @@ impl Object {
                 }))
             }
             ObjectType::Tree => {
-                let ft = FileTree::from_bytes(bytes).unwrap();
+                debug!("Object is Tree");
+                let ft = FileTree::from_bytes(bytes[1..].to_vec()).unwrap();
                 debug!("ft: {:?}", ft);
                 Some(Self::Tree(ft))
             }

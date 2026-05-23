@@ -6,7 +6,10 @@ use crate::{
     constants::{BASE_DIR_NAME, OBJECTS_DIR},
     internals::{
         hash::commit_hash::CommitHash,
-        objects::{Object, ObjectType, tree::{FileTree, FileTreeNode}},
+        objects::{
+            Object, ObjectType,
+            tree::{FileTree, FileTreeNode},
+        },
     },
 };
 
@@ -45,34 +48,13 @@ pub fn write_object(obj: Object) -> Result<(), std::io::Error> {
 fn write_ft(ft: &FileTree, mut path: PathBuf) -> Result<(), std::io::Error> {
     path.push(ft.to_hash().to_str());
     if !path.exists() {
-        let bytes = ft.to_bytes();
+        let obj_bytes = Object::Tree(ft.clone()).to_bytes();
         let mut f = File::create_new(&path)?;
-        f.write_all(&bytes)?;
+        f.write_all(&obj_bytes)?;
+        debug!("Bytes: {:?}", obj_bytes);
         info!("Wrote {:?} successfully to {:?}", &ft, path);
     } else {
         info!("File {:?} already exists", path);
     }
     Ok(())
 }
-
-fn write_ft_node(node: &FileTreeNode, mut path: PathBuf) -> Result<(), std::io::Error> {
-    path.push(node.hash.to_str());
-    if path.exists() {
-        debug!("Unchanged hash ({}) for {:?}", node.hash.to_str(), node);
-        return Ok(())
-    }
-    debug!("Writing node to file: {:?}", node);
-
-    match node.object_type {
-        ObjectType::Tree => {
-            let ft = FileTree::from_hash(node.hash).unwrap();
-            write_ft(&ft, path)
-        }
-        ObjectType::Blob => {
-            todo!("Write filetreenode::blob");
-        }
-        ObjectType::Commit => todo!("handle commit in write ft node"),
-    }
-}
-
-

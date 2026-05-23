@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     constants::{BASE_DIR_NAME, OBJECTS_DIR},
     internals::{
-        hash::{commit_hash::CommitHash, hash_blob::hash_file_content},
+        hash::{commit_hash::CommitHash, hash_blob::file_content},
         objects::ObjectType,
     },
 };
@@ -59,7 +59,7 @@ impl GitrsTree {
             match node {
                 TreeNode::File { name, content } => ftns.push(FileTreeNode {
                     object_type: ObjectType::Blob,
-                    hash: *content,
+                    hash: CommitHash::new(content),
                     filename: name.to_owned().into_string().unwrap(),
                 }),
                 TreeNode::Subdir { name: _, content } => {
@@ -107,7 +107,7 @@ pub enum TreeNode {
         name: OsString,
 
         /// Hash value of the file's content as a BLOB
-        content: CommitHash,
+        content: String,
     },
     Subdir {
         /// Subdirectory name
@@ -122,10 +122,10 @@ impl TreeNode {
     pub fn new(entry: DirEntry) -> Self {
         if entry.file_type().unwrap().is_file() {
             info!("File node: {:?}", entry.file_name());
-            let h = hash_file_content(&entry.path());
+            let f_content = file_content(&entry.path()).unwrap();
             TreeNode::File {
                 name: entry.file_name(),
-                content: h.unwrap(),
+                content: f_content,
             }
         } else if entry.file_type().unwrap().is_dir() {
             let new_path = entry.path();
@@ -211,17 +211,20 @@ impl FileTree {
 
     /// | FileTreeNode 0 | FT_NODE_SEPARATOR (1 byte) | FileTreeNode 1 | FT_NODE_SEPARATOR | ... | FT_NODE_SEPARATOR | FileTreeNode n |
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.values
+        let bytes = self.values
             .iter()
             .flat_map(|node| {
                 let mut bytes = node.to_bytes();
                 bytes.push(Self::FT_NODE_SEPARATOR); // newline as node separator
                 bytes
             })
-            .collect::<Vec<u8>>()
+            .collect::<Vec<u8>>();
+        debug!("FT bytes: {:?}", bytes);
+        bytes
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, std::io::Error> {
+        debug!("FT from bytes: {:?}", bytes);
         let values: Vec<FileTreeNode> = bytes
             .split(|b| *b == Self::FT_NODE_SEPARATOR)
             .filter_map(|bytes| {
@@ -257,14 +260,19 @@ impl FileTreeNode {
     /// | object_type (1 byte) | hash (8 bytes) | filename (n bytes; until EOF)
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![self.object_type.to_u8()];
+        debug!("hash bytes: {:?}", self.hash.to_bytes());
         bytes.extend(self.hash.to_bytes());
+        debug!("Filename bytes: {:?}", self.filename.as_bytes());
         bytes.extend(self.filename.as_bytes());
+        debug!("Node bytes: {:?}", bytes);
         bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, std::io::Error> {
+        debug!("Node from bytes: {:?}", bytes);
         let object_type = ObjectType::from_u8(bytes[0]).unwrap();
         let hash = CommitHash::from_bytes(&bytes[1..CommitHash::HASH_LEN + 1].try_into().unwrap());
+        debug!("Remainder: {:?}", &bytes[1+std::mem::size_of::<CommitHash>()..]);
         let filename = str::from_utf8(&bytes[1 + std::mem::size_of::<CommitHash>()..])
             .unwrap()
             .to_string();

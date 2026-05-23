@@ -21,9 +21,9 @@ pub fn hash_blob(filepath: &str) -> Result<(CommitHash, FileContent), std::io::E
     Ok((content_hash, file_content))
 }
 
-pub fn hash_file_content(filepath: &Path) -> Result<CommitHash, std::io::Error> {
+pub fn file_content(filepath: &Path) -> Result<String, std::io::Error> {
     info!("Hashing file: {:?}", filepath);
     let mut buffer = String::new();
     File::open(filepath)?.read_to_string(&mut buffer)?;
-    Ok(CommitHash::new(&buffer))
+    Ok(buffer)
 }

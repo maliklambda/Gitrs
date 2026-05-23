@@ -2,13 +2,13 @@ use crate::internals::hash::commit_hash::CommitHash;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CatFileConfig {
-    pub value: CommitHash,
+    pub values: Vec<CommitHash>,
     pub flags: CatFileMode,
 }
 
 impl CatFileConfig {
-    pub fn new(value: CommitHash, flags: CatFileMode) -> Self {
-        Self { value, flags }
+    pub fn new(values: Vec<CommitHash>, flags: CatFileMode) -> Self {
+        Self { values, flags }
     }
 }
 
