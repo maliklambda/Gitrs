@@ -2,13 +2,7 @@ use std::path::PathBuf;
 
 use log::info;
 
-use crate::{
-    constants::CONTENT_DIR,
-    internals::{
-        hash::commit_hash::CommitHash,
-        objects::tree::{FileTree, GitrsTree},
-    },
-};
+use crate::{constants::CONTENT_DIR, internals::objects::tree::FileTree};
 
 #[derive(Debug)]
 pub enum HashTreeError<'a> {
@@ -17,7 +11,6 @@ pub enum HashTreeError<'a> {
 
 /// Hashes a subtree.
 /// Argument filepath refers to a path in the content directory.
-/// Returns file tree root and its children
 pub fn hash_tree<'a>(filepath: &'a str) -> Result<FileTree, HashTreeError<'a>> {
     let mut path = PathBuf::from(CONTENT_DIR);
     path.push(filepath);

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// Any gitrs hashing is done via a CommitHash (not just commits, also blobs, trees, etc.)
 /// Wraps the hash in a struct field to allow impl blocks below
 /// Called "CommitHash" instead of "Hash" to avoid ambiguity with stdlib Hash
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, Eq, Hash)]
 pub struct CommitHash {
     pub hash: u64,
 }

@@ -9,10 +9,7 @@ use crate::{
     gitrs::Gitrs,
     internals::{
         hash::{commit_hash::CommitHash, hash_object},
-        objects::{
-            cat_file::CatFileMode,
-            tree::FileTree,
-        },
+        objects::{cat_file::CatFileMode, tree::FileTree},
     },
 };
 
@@ -59,11 +56,8 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
         }
         Command::CatFile(cat_file_config) => {
             for value in cat_file_config.values {
-                let obj = Gitrs::find_object_by_hash(value).map_err(|_| {
-                    ExecuteError::NonExistingHash {
-                        hash: value,
-                    }
-                })?;
+                let obj = Gitrs::find_object_by_hash(value)
+                    .map_err(|_| ExecuteError::NonExistingHash { hash: value })?;
                 debug!("Returned object: {:?}", obj);
                 match cat_file_config.flags {
                     CatFileMode::Type => println!("{:?}", obj.to_object_type()),

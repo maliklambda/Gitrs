@@ -7,9 +7,7 @@ use crate::{
     },
     internals::{
         hash::commit_hash::CommitHash,
-        objects::{
-            cat_file::{CatFileConfig, CatFileMode},
-        },
+        objects::cat_file::{CatFileConfig, CatFileMode},
     },
 };
 

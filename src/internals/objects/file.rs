@@ -18,4 +18,11 @@ impl FileContent {
             content,
         })
     }
+
+    pub fn new(fname: &str, content: String) -> Self {
+        Self {
+            fname: fname.into(),
+            content,
+        }
+    }
 }

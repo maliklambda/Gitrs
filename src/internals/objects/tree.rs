@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ffi::OsString,
     fs::{DirEntry, read_dir},
     io::Read,
@@ -44,26 +45,38 @@ impl GitrsTree {
     /// GitrsTree to File Trees from scratch.
     /// Returns the root hash & all sub file trees.
     /// GitrsTrees cannot simply be stored as an object^1.
-    /// To be storable, they must be converted to an
+    /// To be storable, they must be converted to a FileTree.
     /// ^1 While it can be, it is advantageous to not store the entire tree,
     /// but rather hash-chains of subtrees. This saves space & complexity for the storage.
-    pub fn to_file_trees(&self) -> (CommitHash, Vec<FileTree>) {
+    pub fn to_file_trees(&self) -> (CommitHash, Vec<FileTree>, HashMap<CommitHash, String>) {
         let mut file_trees: Vec<FileTree> = vec![];
-        let root_hash = self.flatten_recursive(&mut file_trees);
-        (root_hash.hash, file_trees)
+
+        // keep track of blob contents.
+        // Since the blob content is lost when converting to a FileTree (only the hash remains).
+        let mut blob_contents: HashMap<CommitHash, String> = HashMap::new();
+        let root = self.flatten_recursive(&mut file_trees, &mut blob_contents);
+        (root.hash, file_trees, blob_contents)
     }
 
-    fn flatten_recursive(&self, trees: &mut Vec<FileTree>) -> FileTreeNode {
+    fn flatten_recursive(
+        &self,
+        trees: &mut Vec<FileTree>,
+        blob_contents: &mut HashMap<CommitHash, String>,
+    ) -> FileTreeNode {
         let mut ftns: Vec<FileTreeNode> = vec![];
         for node in &self.content {
             match node {
-                TreeNode::File { name, content } => ftns.push(FileTreeNode {
-                    object_type: ObjectType::Blob,
-                    hash: CommitHash::new(content),
-                    filename: name.to_owned().into_string().unwrap(),
-                }),
+                TreeNode::File { name, content } => {
+                    let h = CommitHash::new(content);
+                    blob_contents.insert(h, content.to_string());
+                    ftns.push(FileTreeNode {
+                        object_type: ObjectType::Blob,
+                        hash: h,
+                        filename: name.to_owned().into_string().unwrap(),
+                    })
+                }
                 TreeNode::Subdir { name: _, content } => {
-                    let ftn = content.flatten_recursive(trees);
+                    let ftn = content.flatten_recursive(trees, blob_contents);
                     ftns.push(ftn);
                 }
             }
@@ -71,6 +84,7 @@ impl GitrsTree {
         let new_ft = FileTree {
             values: ftns,
             children: None,
+            blobs: None,
         };
         let hash = new_ft.to_hash();
         trees.push(new_ft);
@@ -156,6 +170,10 @@ pub struct FileTree {
 
     /// In memory version of all of the FT's children
     pub children: Option<Vec<FileTree>>,
+
+    /// Reference to Blob contents by their hashes
+    /// Only stored in root
+    pub blobs: Option<HashMap<CommitHash, String>>,
 }
 
 impl FileTree {
@@ -163,11 +181,13 @@ impl FileTree {
 
     /// Builds a tree from an existing directory.
     /// Assumes that gitrs/objects/ is empty (no existing object files).
-    /// Return value: Self + its children where Self is the very last item in the return vec
     pub fn build_initial(path: &Path) -> Result<Self, std::io::Error> {
         let gitrs_tree = GitrsTree::build_tree(path)?;
-        let (_, mut fts) = gitrs_tree.to_file_trees();
+        let (_, mut fts, blob_contents) = gitrs_tree.to_file_trees();
         let mut root = fts.pop().unwrap();
+
+        // set values for root only
+        root.blobs = Some(blob_contents);
         root.children = Some(fts);
         Ok(root)
     }
@@ -211,7 +231,8 @@ impl FileTree {
 
     /// | FileTreeNode 0 | FT_NODE_SEPARATOR (1 byte) | FileTreeNode 1 | FT_NODE_SEPARATOR | ... | FT_NODE_SEPARATOR | FileTreeNode n |
     pub fn to_bytes(&self) -> Vec<u8> {
-        let bytes = self.values
+        let bytes = self
+            .values
             .iter()
             .flat_map(|node| {
                 let mut bytes = node.to_bytes();
@@ -238,6 +259,7 @@ impl FileTree {
         Ok(Self {
             values,
             children: None,
+            blobs: None,
         })
     }
 }
@@ -272,7 +294,10 @@ impl FileTreeNode {
         debug!("Node from bytes: {:?}", bytes);
         let object_type = ObjectType::from_u8(bytes[0]).unwrap();
         let hash = CommitHash::from_bytes(&bytes[1..CommitHash::HASH_LEN + 1].try_into().unwrap());
-        debug!("Remainder: {:?}", &bytes[1+std::mem::size_of::<CommitHash>()..]);
+        debug!(
+            "Remainder: {:?}",
+            &bytes[1 + std::mem::size_of::<CommitHash>()..]
+        );
         let filename = str::from_utf8(&bytes[1 + std::mem::size_of::<CommitHash>()..])
             .unwrap()
             .to_string();

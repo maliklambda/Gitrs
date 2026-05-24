@@ -46,12 +46,11 @@ pub fn hash_object(
         }
         ObjectType::Tree => {
             let root = hash_tree(value).unwrap();
-            let hash = root.to_hash();
-
+            let h = root.to_hash();
             if flags.write {
                 write_object(Object::Tree(root))?;
             }
-            Ok(hash)
+            Ok(h)
         }
         _ => todo!("Hash object other than blob"),
     }
