@@ -1,9 +1,5 @@
 use std::{
-    collections::HashMap,
-    ffi::OsString,
-    fs::{DirEntry, read_dir},
-    io::Read,
-    path::{Path, PathBuf},
+    collections::HashMap, ffi::OsString, fmt::write, fs::{DirEntry, read_dir}, io::Read, path::{Path, PathBuf}
 };
 
 use log::{debug, info};
@@ -264,6 +260,18 @@ impl FileTree {
     }
 }
 
+impl std::fmt::Display for FileTree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self
+            .values
+            .iter()
+            .map(|node| node.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        write!(f, "{}", s)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct FileTreeNode {
     // /// file/dir permissions
@@ -309,6 +317,12 @@ impl FileTreeNode {
     }
 }
 
+impl std::fmt::Display for FileTreeNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", self.object_type, self.hash, self.filename)
+    }
+}
+
 #[test]
 fn file_tree_node_serialization() {
     let ft_nodes = [
@@ -349,6 +363,7 @@ fn file_tree_serialization() {
     let ft = FileTree {
         values: ft_nodes,
         children: None,
+        blobs: None,
     };
     let bytes = ft.to_bytes();
     let ft_new = FileTree::from_bytes(bytes).expect("Failed to convert: bytes -> FT");

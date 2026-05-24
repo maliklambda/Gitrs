@@ -45,10 +45,7 @@ pub fn write_object(obj: Object) -> Result<(), std::io::Error> {
 
 /// Writes an entire file tree from its root.
 /// Expects root to have a value for both children and blobs.
-fn write_ft_root(
-    root: &FileTree,
-    path: PathBuf,
-) -> Result<(), std::io::Error> {
+fn write_ft_root(root: &FileTree, path: PathBuf) -> Result<(), std::io::Error> {
     let blobs = root.blobs.clone().expect(
         "FileTree needs to have a value for blob-contents when writing a tree object to file",
     );

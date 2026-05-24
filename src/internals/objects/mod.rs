@@ -4,14 +4,10 @@ pub mod file;
 pub mod tree;
 pub mod write_object;
 
-use log::{debug, info};
+use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::internals::objects::{
-    commit::Commit,
-    file::FileContent,
-    tree::{FileTree, GitrsTree},
-};
+use crate::internals::objects::{commit::Commit, file::FileContent, tree::FileTree};
 
 /// Object enum without any values associated with a type.
 /// Must have the same variants as struct Object.
@@ -38,6 +34,16 @@ impl ObjectType {
             1 => Some(Self::Blob),
             2 => Some(Self::Tree),
             _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for ObjectType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ObjectType::Tree => write!(f, "tree"),
+            ObjectType::Blob => write!(f, "blob"),
+            ObjectType::Commit => write!(f, "commit"),
         }
     }
 }
@@ -139,6 +145,7 @@ impl Object {
     pub fn content(&self) -> String {
         match self {
             Object::Blob(fc) => fc.content.to_string(),
+            Object::Tree(ft) => ft.to_string(),
             _ => todo!("Pretty print content for {:?}", self),
         }
     }
