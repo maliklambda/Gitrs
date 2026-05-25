@@ -154,7 +154,7 @@ impl TreeNode {
                 FileMetadata::new(fmd.modified().unwrap(), fmd.len())
             };
             TreeNode::File {
-                name: entry.file_name(),
+                name: entry.path().into_os_string(),
                 content: f_content,
                 metadata,
             }
@@ -283,7 +283,29 @@ impl FileTree {
     /// Flatten a FileTree into an Index
     /// Used for comparing two indices
     pub fn to_index(&self) -> Index {
-        todo!()
+        let mut entries: Vec<IndexTreeEntry> = self
+            .children
+            .as_ref()
+            .unwrap()
+            .iter()
+            .flat_map(|ft| {
+                ft.values
+                    .iter()
+                    .flat_map(|v| v.to_index_entry())
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        let e2: Vec<IndexTreeEntry> = self
+            .values
+            .iter()
+            .flat_map(|value| value.to_index_entry())
+            .collect();
+        entries.extend(e2);
+
+        Index {
+            entries,
+            empty: false,
+        }
     }
 }
 
@@ -353,10 +375,15 @@ impl FileTreeNode {
 
     /// Build Index entry
     pub fn to_index_entry(&self) -> Option<IndexTreeEntry> {
-        todo!()
-        // self.object_type == ObjectType::Blob {
-        //     return Some(IndexTreeEntry::new(IndexTreeMetadata::new())
-        // }
+        if self.object_type == ObjectType::Blob {
+            Some(IndexTreeEntry::new(
+                self.metadata.clone(),
+                self.hash,
+                self.filepath.clone(),
+            ))
+        } else {
+            None
+        }
     }
 }
 

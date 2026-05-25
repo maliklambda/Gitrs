@@ -1,5 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
+use log::debug;
+
 use crate::internals::objects::index::IndexTreeEntry;
 
 /// The difference between two snapshots S1 and S2.
@@ -31,7 +33,6 @@ impl<'a, 'b> Diff<'a, 'b> {
     where
         'b: 'a,
     {
-        // todo: remove option wrapper
         let diffs_s1: Vec<(&Path, SingleDiff)> = s1
             .iter()
             .filter_map(|(k, v1)| {
@@ -44,6 +45,7 @@ impl<'a, 'b> Diff<'a, 'b> {
                 }
             })
             .collect();
+        debug!("diffs s1: {:?}", diffs_s1);
 
         // values that have been added in s2
         // (that are present in s2 but not in s1)
@@ -57,6 +59,7 @@ impl<'a, 'b> Diff<'a, 'b> {
                 }
             })
             .collect();
+        debug!("diffs s2: {:?}", diffs_s2);
 
         let diffs: HashMap<&Path, SingleDiff> =
             [diffs_s1, diffs_s2].into_iter().flatten().collect();
@@ -81,6 +84,13 @@ impl<'a, 'b> Diff<'a, 'b> {
     }
 }
 
+impl std::fmt::Display for Diff<'_, '_>{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.diffs.iter().map(|(path, diff)| diff.to_string()).collect::<Vec<String>>().join("\n");
+        write!(f, "{s}")
+    }
+}
+
 #[derive(Debug)]
 pub enum SingleDiff<'a> {
     Added {
@@ -93,4 +103,15 @@ pub enum SingleDiff<'a> {
     Deleted {
         before: &'a IndexTreeEntry,
     },
+}
+
+
+impl std::fmt::Display for SingleDiff<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Added { after } => write!(f, "Added: {after}"),
+            Self::Modified { before, after } => write!(f, "Modfied: {before} -> {after}"),
+            Self::Deleted { before } => write!(f, "Deleted: {before}"),
+        }
+    }
 }

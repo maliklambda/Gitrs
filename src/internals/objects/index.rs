@@ -19,12 +19,19 @@ use crate::{
 /// Structure that represents the staging area.
 /// The index is cached in the gitrs/index file.
 pub struct Index {
-    entries: Vec<IndexTreeEntry>,
+    /// empty only before first commit
+    pub empty: bool,
+    pub entries: Vec<IndexTreeEntry>,
 }
 
 impl Index {
     /// separates entries in the index file.
     pub const INDEX_ENTRY_SEPARATOR: u8 = b'\0';
+
+    /// Is the index empty?
+    pub fn is_empty(&self) -> bool {
+        self.empty
+    }
 
     /// | IndexTreeEntry_1 | INDEX_ENTRY_SEPARATOR | ... | INDEX_ENTRY_SEPARATOR | IndexTreeEntry_n |
     fn to_bytes(&self) -> Vec<u8> {
@@ -58,7 +65,10 @@ impl Index {
         f_idx.read_to_end(&mut bytes)?;
         Ok(Self::from_bytes(bytes).unwrap_or_else(|| {
             info!("Empty index file");
-            Self { entries: vec![] }
+            Self {
+                entries: vec![],
+                empty: true,
+            }
         }))
     }
 
@@ -67,7 +77,10 @@ impl Index {
             .split(|b| *b == Self::INDEX_ENTRY_SEPARATOR)
             .map(IndexTreeEntry::from_bytes)
             .collect();
-        Some(Self { entries: entries? })
+        Some(Self {
+            entries: entries?,
+            empty: false,
+        })
     }
 
     fn get_idx_file() -> Result<File, std::io::Error> {
@@ -77,11 +90,22 @@ impl Index {
     }
 
     /// Compares an index with a filetree and returns the difference between the two.
+    /// FileTree is assumed to be before index.
     pub fn compare_file_tree<'a, 'b>(&self, ft: FileTree) -> Diff<'a, 'b> {
-        let s1 = ft.to_index().to_map();
+        let idx = ft.to_index();
+        let s1 = idx.to_map();
+        info!("Snapshot 1: {:?}", s1);
         let s2 = self.to_map();
+        info!("Snapshot 2: {:?}", s2);
+        let empty_hm = HashMap::new();
+        let d = if self.is_empty() {
+            info!("no previous commit");
+            Diff::new(&empty_hm, &s1)
+        } else {
+            Diff::new(&s1, &s2)
+        };
+        info!("Diff: {d}");
         todo!()
-        // Diff::new(&s1, &s2)
     }
 
     /// Go from Vector of IndexTreeEntries to a map
@@ -151,5 +175,11 @@ impl IndexTreeEntry {
             hash,
             filepath: filepath.into(),
         })
+    }
+}
+
+impl std::fmt::Display for IndexTreeEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.filepath.to_str().unwrap(), self.hash)
     }
 }

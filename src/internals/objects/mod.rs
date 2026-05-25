@@ -9,7 +9,11 @@ pub mod write_object;
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::internals::objects::{commit::Commit, file::{FileContent, FileMetadata}, tree::FileTree};
+use crate::internals::objects::{
+    commit::Commit,
+    file::{FileContent, FileMetadata},
+    tree::FileTree,
+};
 
 /// Object enum without any values associated with a type.
 /// Must have the same variants as struct Object.
@@ -111,15 +115,19 @@ impl Object {
                 debug!("Object is Blob");
                 let mut idx = 1; // one for object type byte
                 let metadata = {
-                    let fmd = FileMetadata::from_bytes(&bytes[idx..idx+FileMetadata::BYTE_LEN]).ok()?;
+                    let fmd =
+                        FileMetadata::from_bytes(&bytes[idx..idx + FileMetadata::BYTE_LEN]).ok()?;
                     idx += FileMetadata::BYTE_LEN;
                     fmd
                 };
-                println!("metadata bytes (from): {:?}", &bytes[..FileMetadata::BYTE_LEN]);
+                println!(
+                    "metadata bytes (from): {:?}",
+                    &bytes[..FileMetadata::BYTE_LEN]
+                );
                 let fname = {
                     let i = bytes[idx..].iter().position(|b| *b == b'\0')?;
-                    let s = String::from_utf8(bytes[idx..idx+i].to_vec()).unwrap();
-                    idx += i +1;
+                    let s = String::from_utf8(bytes[idx..idx + i].to_vec()).unwrap();
+                    idx += i + 1;
                     s
                 };
                 let content = String::from_utf8(bytes[idx..].to_vec()).unwrap();

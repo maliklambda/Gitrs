@@ -1,4 +1,10 @@
-use std::{ffi::OsString, fs::File, io::Read, path::Path, time::{Duration, SystemTime, UNIX_EPOCH}};
+use std::{
+    ffi::OsString,
+    fs::File,
+    io::Read,
+    path::Path,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Debug, PartialEq)]
 pub struct FileContent {
@@ -25,7 +31,11 @@ impl FileContent {
     }
 
     pub fn new(fname: OsString, content: String, metadata: FileMetadata) -> Self {
-        Self { fname, content, metadata }
+        Self {
+            fname,
+            content,
+            metadata,
+        }
     }
 }
 
@@ -62,12 +72,13 @@ impl FileMetadata {
         let mut bytes = [0u8; Self::BYTE_LEN];
 
         // 1. Convert SystemTime to duration since UNIX_EPOCH
-        let duration = self.last_modified
+        let duration = self
+            .last_modified
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards or file predates 1970");
 
-        let secs = duration.as_secs();        // 8 bytes
-        let nanos = duration.subsec_nanos();  // 4 bytes
+        let secs = duration.as_secs(); // 8 bytes
+        let nanos = duration.subsec_nanos(); // 4 bytes
 
         // 2. Write data using Little-Endian format
         bytes[0..8].copy_from_slice(&secs.to_le_bytes());
