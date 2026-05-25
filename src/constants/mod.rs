@@ -20,6 +20,9 @@ pub const BASE_DIR_NAME: &str = "gitrs";
 /// config file name
 pub const CONFIG_FILE: &str = "gitrsconfig";
 
+/// index file name
+pub const INDEX_FILE: &str = "index";
+
 /// similar to git's .git/HEAD file. Tracks the latest commit
 pub const HEAD_FILE: &str = "HEAD";
 

@@ -21,6 +21,7 @@ impl std::fmt::Display for CommitHash {
 }
 
 impl CommitHash {
+    /// Return the length of a hash in bytes
     pub const HASH_LEN: usize = std::mem::size_of::<u64>();
 
     pub fn new(s: &str) -> Self {

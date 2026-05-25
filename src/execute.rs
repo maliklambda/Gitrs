@@ -9,7 +9,7 @@ use crate::{
     gitrs::Gitrs,
     internals::{
         hash::{commit_hash::CommitHash, hash_object},
-        objects::{cat_file::CatFileMode, tree::FileTree},
+        objects::{cat_file::CatFileMode, index::Index, tree::FileTree},
     },
 };
 
@@ -65,6 +65,12 @@ pub fn execute<'a>(cmd: Command<'a>) -> Result<(), ExecuteError> {
                     CatFileMode::PrettyPrint => println!("{}", obj.content()),
                 }
             }
+        }
+        Command::Add { files } => {
+            let idx = Index::from_idx_file().unwrap();
+            let tree = FileTree::build_initial(Path::new(CONTENT_DIR)).unwrap();
+            let diff = idx.compare_file_tree(tree);
+            debug!("Diff: {:?}", diff);
         }
         _ => todo!("Execution for command: {:?}", cmd),
     }

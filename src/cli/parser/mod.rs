@@ -55,7 +55,27 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_add(&mut self) -> Result<Command<'_>, ParseCliError<'_>> {
-        todo!()
+        let files: Vec<&str> = self
+            .lexer
+            .tokens
+            .iter()
+            .map(|t| {
+                if let Token::TString(s) = t {
+                    Ok(*s)
+                } else {
+                    Err(*t)
+                }
+            })
+            .collect::<Result<Vec<&str>, Token>>()
+            .map_err(|t| ParseCliError::InvalidArgumentForCommand {
+                cmd: CMD_ADD,
+                invalid_arg: t,
+            })?;
+        if files.is_empty() {
+            Err(ParseCliError::MissingArgument("file(s)"))
+        } else {
+            Ok(Command::Add { files })
+        }
     }
 
     fn parse_log(&mut self) -> Result<Command<'_>, ParseCliError<'_>> {

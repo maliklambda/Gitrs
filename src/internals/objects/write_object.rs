@@ -87,9 +87,10 @@ fn write_ft(
             .get(&b.hash)
             .expect(&format!("Did not find hash {:?} in blobs.", b.hash));
         write_object(Object::Blob(FileContent::new(
-            &b.filename,
+            b.filepath.clone(),
             content.to_owned(),
-        )));
+            b.metadata.clone(),
+        )))?;
     }
     Ok(())
 }

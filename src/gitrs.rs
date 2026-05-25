@@ -9,7 +9,9 @@ use log::{debug, info};
 use crate::{
     command::Command,
     config::GitrsConfig,
-    constants::{BASE_DIR_NAME, CONFIG_FILE, HEAD_FILE, HEADS_DIR, OBJECTS_DIR, REFS_DIR},
+    constants::{
+        BASE_DIR_NAME, CONFIG_FILE, HEAD_FILE, HEADS_DIR, INDEX_FILE, OBJECTS_DIR, REFS_DIR,
+    },
     execute::ExecuteError,
     internals::{
         branch::Branch,
@@ -103,6 +105,13 @@ impl<'a> Gitrs<'a> {
             let mut objects_dir = base_dir.to_path_buf();
             objects_dir.push(OBJECTS_DIR);
             std::fs::create_dir_all(&objects_dir).map_err(|err| ExecuteError::InitError {
+                msg: err.to_string(),
+            })?;
+
+            // index file
+            let mut index_file_path = base_dir.to_path_buf();
+            index_file_path.push(INDEX_FILE);
+            File::create_new(&index_file_path).map_err(|err| ExecuteError::InitError {
                 msg: err.to_string(),
             })?;
 

@@ -1,13 +1,15 @@
 pub mod cat_file;
 pub mod commit;
+pub mod diff;
 pub mod file;
+pub mod index;
 pub mod tree;
 pub mod write_object;
 
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::internals::objects::{commit::Commit, file::FileContent, tree::FileTree};
+use crate::internals::objects::{commit::Commit, file::{FileContent, FileMetadata}, tree::FileTree};
 
 /// Object enum without any values associated with a type.
 /// Must have the same variants as struct Object.
@@ -72,7 +74,8 @@ impl Object {
         match self {
             Object::Blob(fc) => {
                 // Structure of Blob content:
-                // | filename | \0 (to signal end of filename) | file content |
+                // | metadata 16b | filename | \0 (to signal end of filename) | file content |
+                v.extend(fc.metadata.to_bytes());
                 let fname: String = fc
                     .fname
                     .to_owned()
@@ -105,15 +108,23 @@ impl Object {
         )? {
             ObjectType::Blob => {
                 debug!("Object is Blob");
-                let (fname, idx) = {
-                    let i = bytes.iter().position(|b| *b == b'\0')?;
+                let mut idx = 0;
+                let metadata = {
+                    let fmd = FileMetadata::from_bytes(&bytes[..FileMetadata::BYTE_LEN])?;
+                    idx += FileMetadata::BYTE_LEN;
+                    fmd
+                };
+                let fname = {
+                    let i = bytes[idx..].iter().position(|b| *b == b'\0')?;
                     let s = String::from_utf8(bytes[1..i].to_vec()).unwrap();
-                    (s, i + 1)
+                    idx += i +1;
+                    s
                 };
                 let content = String::from_utf8(bytes[idx..].to_vec()).unwrap();
                 Some(Self::Blob(FileContent {
                     fname: fname.into(),
                     content,
+                    metadata,
                 }))
             }
             ObjectType::Tree => {
@@ -156,6 +167,7 @@ fn object_serialization() {
     let obj_blob = Object::Blob(FileContent {
         fname: "hello.c".into(),
         content: "void main(){return 0;}".to_string(),
+        metadata: FileMetadata::default(),
     });
     let bytes = obj_blob.to_bytes();
     let obj_blob_new = Object::from_bytes(bytes).unwrap();

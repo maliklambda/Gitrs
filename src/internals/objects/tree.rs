@@ -1,22 +1,29 @@
 use std::{
-    collections::HashMap, ffi::OsString, fmt::write, fs::{DirEntry, read_dir}, io::Read, path::{Path, PathBuf}
+    collections::HashMap,
+    ffi::OsString,
+    fs::{DirEntry, read_dir},
+    io::Read,
+    path::{Path, PathBuf},
 };
 
 use log::{debug, info};
-use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::{BASE_DIR_NAME, OBJECTS_DIR},
     internals::{
         hash::{commit_hash::CommitHash, hash_blob::file_content},
-        objects::ObjectType,
+        objects::{
+            ObjectType,
+            file::FileMetadata,
+            index::{Index, IndexTreeEntry},
+        },
     },
 };
 
 /// A snapshot of the file system.
 /// A tree consists of all root level nodes which in term reference their children
 /// (if they themselves are sub-directories)
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct GitrsTree {
     pub dir_name: OsString,
     pub content: Vec<TreeNode>,
@@ -62,13 +69,18 @@ impl GitrsTree {
         let mut ftns: Vec<FileTreeNode> = vec![];
         for node in &self.content {
             match node {
-                TreeNode::File { name, content } => {
+                TreeNode::File {
+                    name,
+                    content,
+                    metadata,
+                } => {
                     let h = CommitHash::new(content);
                     blob_contents.insert(h, content.to_string());
                     ftns.push(FileTreeNode {
                         object_type: ObjectType::Blob,
                         hash: h,
-                        filename: name.to_owned().into_string().unwrap(),
+                        filepath: name.to_owned().into_string().unwrap().into(),
+                        metadata: metadata.clone(),
                     })
                 }
                 TreeNode::Subdir { name: _, content } => {
@@ -87,7 +99,8 @@ impl GitrsTree {
         FileTreeNode {
             object_type: ObjectType::Tree,
             hash,
-            filename: self.dir_name.to_str().unwrap().to_string(),
+            filepath: self.dir_name.clone(),
+            metadata: FileMetadata::default(),
         }
     }
 
@@ -110,7 +123,7 @@ impl GitrsTree {
 /// Since the tree represents a file-system, a node can be either
 /// A) a file with a link to its content, or
 /// B) a subdirectory (or sub-tree) with links to other TreeNodes.
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TreeNode {
     File {
         /// Filename
@@ -118,6 +131,9 @@ pub enum TreeNode {
 
         /// Hash value of the file's content as a BLOB
         content: String,
+
+        /// metadata
+        metadata: FileMetadata,
     },
     Subdir {
         /// Subdirectory name
@@ -133,9 +149,14 @@ impl TreeNode {
         if entry.file_type().unwrap().is_file() {
             info!("File node: {:?}", entry.file_name());
             let f_content = file_content(&entry.path()).unwrap();
+            let metadata = {
+                let fmd = entry.metadata().unwrap();
+                FileMetadata::new(fmd.modified().unwrap(), fmd.len())
+            };
             TreeNode::File {
                 name: entry.file_name(),
                 content: f_content,
+                metadata,
             }
         } else if entry.file_type().unwrap().is_dir() {
             let new_path = entry.path();
@@ -158,7 +179,7 @@ impl TreeNode {
 /// GitrsTree representaion on file.
 /// Instead of recursive tree references, the hash of the subtree is kept.
 /// References to files do not much change.
-#[derive(Debug, Serialize, Deserialize, Default, PartialEq, Clone)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct FileTree {
     /// Immediate children.
     /// Only chained by hash value
@@ -258,6 +279,12 @@ impl FileTree {
             blobs: None,
         })
     }
+
+    /// Flatten a FileTree into an Index
+    /// Used for comparing two indices
+    pub fn to_index(&self) -> Index {
+        todo!()
+    }
 }
 
 impl std::fmt::Display for FileTree {
@@ -272,7 +299,7 @@ impl std::fmt::Display for FileTree {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FileTreeNode {
     // /// file/dir permissions
     // permissions: u32,
@@ -283,43 +310,59 @@ pub struct FileTreeNode {
     pub hash: CommitHash,
 
     /// File or dir name
-    pub filename: String,
+    pub filepath: OsString,
+
+    /// Metadata of dir or file
+    /// Can be omitted for testing
+    pub metadata: FileMetadata,
 }
 
 impl FileTreeNode {
-    /// | object_type (1 byte) | hash (8 bytes) | filename (n bytes; until EOF)
+    /// | object_type (1 byte) | IndexTreeMetadata (16 bytes) | hash (8 bytes) | filename (n bytes; until EOF)
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![self.object_type.to_u8()];
-        debug!("hash bytes: {:?}", self.hash.to_bytes());
+        bytes.extend(self.metadata.to_bytes());
         bytes.extend(self.hash.to_bytes());
-        debug!("Filename bytes: {:?}", self.filename.as_bytes());
-        bytes.extend(self.filename.as_bytes());
-        debug!("Node bytes: {:?}", bytes);
+        bytes.extend(self.filepath.to_str().unwrap().bytes());
         bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, std::io::Error> {
         debug!("Node from bytes: {:?}", bytes);
         let object_type = ObjectType::from_u8(bytes[0]).unwrap();
-        let hash = CommitHash::from_bytes(&bytes[1..CommitHash::HASH_LEN + 1].try_into().unwrap());
-        debug!(
-            "Remainder: {:?}",
-            &bytes[1 + std::mem::size_of::<CommitHash>()..]
-        );
-        let filename = str::from_utf8(&bytes[1 + std::mem::size_of::<CommitHash>()..])
-            .unwrap()
-            .to_string();
+        let mut idx = 1;
+        let hash = {
+            let h =
+                CommitHash::from_bytes(&bytes[idx..CommitHash::HASH_LEN + idx].try_into().unwrap());
+            idx += CommitHash::HASH_LEN;
+            h
+        };
+        let metadata = {
+            let md = FileMetadata::from_bytes(&bytes[idx..FileMetadata::BYTE_LEN + idx]).unwrap();
+            idx += FileMetadata::BYTE_LEN;
+            md
+        };
+        let filepath: OsString = str::from_utf8(&bytes[idx..]).unwrap().to_string().into();
         Ok(Self {
             object_type,
             hash,
-            filename,
+            filepath,
+            metadata,
         })
+    }
+
+    /// Build Index entry
+    pub fn to_index_entry(&self) -> Option<IndexTreeEntry> {
+        todo!()
+        // self.object_type == ObjectType::Blob {
+        //     return Some(IndexTreeEntry::new(IndexTreeMetadata::new())
+        // }
     }
 }
 
 impl std::fmt::Display for FileTreeNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", self.object_type, self.hash, self.filename)
+        write!(f, "{} {} {:?}", self.object_type, self.hash, self.filepath)
     }
 }
 
@@ -329,12 +372,14 @@ fn file_tree_node_serialization() {
         FileTreeNode {
             object_type: ObjectType::Tree,
             hash: CommitHash::new("a tree"),
-            filename: String::from("subdir"),
+            filepath: OsString::from("subdir"),
+            metadata: FileMetadata::default(),
         },
         FileTreeNode {
             object_type: ObjectType::Blob,
             hash: CommitHash::new("a blob"),
-            filename: String::from("file.txt"),
+            filepath: OsString::from("file.txt"),
+            metadata: FileMetadata::default(),
         },
     ];
 
@@ -352,12 +397,14 @@ fn file_tree_serialization() {
         FileTreeNode {
             object_type: ObjectType::Tree,
             hash: CommitHash::new("a tree"),
-            filename: String::from("subdir"),
+            filepath: OsString::from("subdir"),
+            metadata: FileMetadata::default(),
         },
         FileTreeNode {
             object_type: ObjectType::Blob,
             hash: CommitHash::new("a blob"),
-            filename: String::from("file.txt"),
+            filepath: OsString::from("file.txt"),
+            metadata: FileMetadata::default(),
         },
     ];
     let ft = FileTree {

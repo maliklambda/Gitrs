@@ -15,8 +15,8 @@ pub fn hash_blob(filepath: &str) -> Result<(CommitHash, FileContent), std::io::E
     let mut path = PathBuf::from(CONTENT_DIR);
     path.push(filepath);
     info!("path: {:?}", path);
-    let f = File::open(path)?;
-    let file_content = FileContent::from_file(filepath, f)?;
+    let f = File::open(&path)?;
+    let file_content = FileContent::from_file(&path, f)?;
     let content_hash = CommitHash::new(&file_content.content);
     Ok((content_hash, file_content))
 }
