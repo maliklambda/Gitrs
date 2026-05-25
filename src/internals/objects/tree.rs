@@ -318,7 +318,7 @@ pub struct FileTreeNode {
 }
 
 impl FileTreeNode {
-    /// | object_type (1 byte) | IndexTreeMetadata (16 bytes) | hash (8 bytes) | filename (n bytes; until EOF)
+    /// | object_type (1 byte) | metadata (20 bytes) | hash (8 bytes) | filename (n bytes; until EOF)
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![self.object_type.to_u8()];
         bytes.extend(self.metadata.to_bytes());
@@ -331,16 +331,16 @@ impl FileTreeNode {
         debug!("Node from bytes: {:?}", bytes);
         let object_type = ObjectType::from_u8(bytes[0]).unwrap();
         let mut idx = 1;
+        let metadata = {
+            let md = FileMetadata::from_bytes(&bytes[idx..FileMetadata::BYTE_LEN + idx]).unwrap();
+            idx += FileMetadata::BYTE_LEN;
+            md
+        };
         let hash = {
             let h =
                 CommitHash::from_bytes(&bytes[idx..CommitHash::HASH_LEN + idx].try_into().unwrap());
             idx += CommitHash::HASH_LEN;
             h
-        };
-        let metadata = {
-            let md = FileMetadata::from_bytes(&bytes[idx..FileMetadata::BYTE_LEN + idx]).unwrap();
-            idx += FileMetadata::BYTE_LEN;
-            md
         };
         let filepath: OsString = str::from_utf8(&bytes[idx..]).unwrap().to_string().into();
         Ok(Self {

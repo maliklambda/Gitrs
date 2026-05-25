@@ -135,7 +135,7 @@ impl IndexTreeEntry {
         }
         let mut idx = 0;
         let metadata = {
-            let md = FileMetadata::from_bytes(&bytes[..FileMetadata::BYTE_LEN])?;
+            let md = FileMetadata::from_bytes(&bytes[..FileMetadata::BYTE_LEN]).ok()?;
             idx += FileMetadata::BYTE_LEN;
             md
         };
@@ -152,9 +152,4 @@ impl IndexTreeEntry {
             filepath: filepath.into(),
         })
     }
-}
-
-#[test]
-fn index_serialization() {
-    todo!();
 }

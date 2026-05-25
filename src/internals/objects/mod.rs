@@ -76,6 +76,7 @@ impl Object {
                 // Structure of Blob content:
                 // | metadata 16b | filename | \0 (to signal end of filename) | file content |
                 v.extend(fc.metadata.to_bytes());
+                println!("metadata bytes: {:?}", fc.metadata.to_bytes());
                 let fname: String = fc
                     .fname
                     .to_owned()
@@ -108,15 +109,16 @@ impl Object {
         )? {
             ObjectType::Blob => {
                 debug!("Object is Blob");
-                let mut idx = 0;
+                let mut idx = 1; // one for object type byte
                 let metadata = {
-                    let fmd = FileMetadata::from_bytes(&bytes[..FileMetadata::BYTE_LEN])?;
+                    let fmd = FileMetadata::from_bytes(&bytes[idx..idx+FileMetadata::BYTE_LEN]).ok()?;
                     idx += FileMetadata::BYTE_LEN;
                     fmd
                 };
+                println!("metadata bytes (from): {:?}", &bytes[..FileMetadata::BYTE_LEN]);
                 let fname = {
                     let i = bytes[idx..].iter().position(|b| *b == b'\0')?;
-                    let s = String::from_utf8(bytes[1..i].to_vec()).unwrap();
+                    let s = String::from_utf8(bytes[idx..idx+i].to_vec()).unwrap();
                     idx += i +1;
                     s
                 };
